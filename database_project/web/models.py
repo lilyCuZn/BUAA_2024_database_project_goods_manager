@@ -1,14 +1,19 @@
+import json
+
 from django.db import models
 
 # Create your models here.
 
 from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Department(models.Model):
     # 部门
-    id = models.AutoField(primary_key=True)  # 主键，自增
-    name = models.CharField(max_length=30, null=False, blank=False)  # 名称
-    manager = models.ForeignKey("Member", on_delete=models.CASCADE, null=False)  # 负责人编号，外键关联到Member表
+    #id = models.AutoField(primary_key=True)  # 主键，自增
+    name = models.CharField(primary_key=True, max_length=30, null=False, blank=False)  # 名称
+    manager = models.ForeignKey("Member", on_delete=models.CASCADE, null=True)  # 负责人编号，外键关联到Member表
     phone = models.CharField(max_length=11, null=False, blank=False)  # 联系电话，11位
     email = models.EmailField(max_length=50, null=True, blank=True)  # 联系邮箱
     address = models.CharField(max_length=200, null=False, blank=False)  # 部门地址
@@ -19,22 +24,71 @@ class Department(models.Model):
     class Meta:
         db_table = 'department'  # 指定数据库表名
 
+class AutoMemberId(models.Model):
+    id = models.AutoField(primary_key = True)
+    def __str__(self):
+        return str(self.id)
+
 class Member(models.Model):
     IDENTITY_CHOICES = [
         ('admin', '管理员'),
         ('member', '普通成员')
     ]
 
-    id = models.AutoField(primary_key=True)
+    #user = models.OneToOneField(User, on_delete = models.CASCADE)
+    id = models.CharField(max_length=128, primary_key=True)
     name = models.CharField(max_length=30, null=False, blank=False)
     password = models.CharField(max_length=30, null=False, blank=False)
-    department_id = models.ForeignKey(Department, on_delete=models.CASCADE, db_column='department_id')
-    phone = models.BigIntegerField(null=False, blank=False)
+    department_name = models.ForeignKey(Department, on_delete=models.CASCADE, null=True)
+    phone = models.CharField(max_length=20, null=True, blank=False)
     email = models.EmailField(max_length=50, null=True, blank=True)
     identity = models.CharField(max_length=7, choices=IDENTITY_CHOICES, null=False, blank=False)
 
+    def saveNew(self, *args, **kwargs):
+        _ = AutoMemberId.objects.create()
+        self.id = '114514' + str(_.id)
+        return super(Member, self).save(*args, **kwargs)
+
     def __str__(self):
         return self.name
+
+    def to_dict(self):
+        return {
+            'id' : self.id,
+            'name':self.name,
+            'password':self.password,
+            'department_name':str(self.department_name),
+            'phone':self.phone,
+            'email':self.email,
+            'identity':self.identity
+        }
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+    def check_password(self, password):
+        return self.password == password
+
+    def modify_password(self, newPassword):
+        self.password = newPassword
+        self.save()
+
+    def modify_phone(self, newPhone):
+        self.phone = newPhone
+        self.save()
+
+    def modify_email(self, newEmail):
+        self.email= newEmail
+        self.save()
+
+    def modifyInfo(self, name, password, department_name, phone, email, identity):
+        self.name = name
+        self.password = password
+        self.department_name = department_name
+        self.phone = phone
+        self.email = email
+        self.identity = identity
+        self.save()
 
     class Meta:
         db_table = 'member'
@@ -51,8 +105,7 @@ class Category(models.Model):
     class Meta:
         db_table = 'category'  # 指定数据库表名
 
-class ApprovalRecord(models.Model):
-    # 审批记录
+class ApprovalRecord(models.Model): # 审批记录
     OPERATION_TYPE_CHOICES = [
         ('PURCHASE_REQUEST', '物资采购申请'),
         ('INBOUND', '物资入库'),
@@ -121,26 +174,74 @@ class Material(models.Model):
     class Meta:
         db_table = 'material'  # 指定数据库表名
 
-class InventoryRecord(models.Model):
-    # 出入库记录
-    TYPE_CHOICES = [
-        ('入库', '入库'),
-        ('出库', '出库')
-    ]
 
+class ApplicationType(models.TextChoices):
+    RENT = 'REN', '租赁'
+    RETURN = 'RET', '归还'
+
+class ApplyStatusType(models.TextChoices):
+    WAITING = '待确认'
+    APPROVE = '通过'
+    REFUSE = '拒绝'
+
+class UserApplication(models.Model): #用户申请
     id = models.AutoField(primary_key=True)  # 主键，自增
-    item = models.ForeignKey(Material, on_delete=models.CASCADE, null=False)  # 物品编号，外键关联到Material表
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES, null=False, blank=False)  # 出入库类型
-    time = models.DateTimeField(auto_now_add=True)  # 出入库时间，自动添加当前时间
-    member = models.ForeignKey(Member, on_delete=models.CASCADE, null=False)  # 操作员工编号，外键关联Member表
-    remarks = models.CharField(max_length=300, null=True, blank=True)  # 备注信息
-    approval = models.ForeignKey(ApprovalRecord, on_delete=models.CASCADE, null=True, blank=True)  # 审批记录编号，外键关联到ApprovalRecord表
+    userId = models.ForeignKey(Member, on_delete=models.CASCADE, null=True)  # 用户id
+    type = models.CharField(
+        max_length=3,
+        choices=ApplicationType.choices,
+        null=False,
+        blank=False,
+        verbose_name="申请类型"
+    )  # 申请类型
+    phone = models.CharField(max_length=11, null=True, blank=False, verbose_name="电话号码")  # 电话号码（作为字符串处理以保留前导零）
+    message = models.CharField(max_length=300, null=True, blank=False, verbose_name="物资信息")  # 物资信息
+    usage = models.CharField(max_length=300, null=True, blank=False, verbose_name="物资用途")  # 物资用途
+    status = models.CharField(
+        max_length = 4,
+        choices=ApplyStatusType.choices,
+        null = True,
+    ) #申请状态
 
     def __str__(self):
-        return f"{self.type} - {self.item.name} - {self.time}"
+        return f"用户申请 - {self.name} - {self.get_type_display()}"
+
+    def to_dict(self):
+        return ({
+            'id':self.id,
+            'userId':str(self.userId),
+            'type':self.type,
+            'phone':self.phone,
+            'message':self.message,
+            'usage':self.usage ,
+            'status':self.status
+        })
 
     class Meta:
-        db_table = 'inventory_record'  # 指定数据库表名
+        db_table = 'UserApplication'
+        verbose_name = "用户申请"
+        verbose_name_plural = "用户申请"
+
+# class InventoryRecord(models.Model):
+#     # 出入库记录
+#     TYPE_CHOICES = [
+#         ('入库', '入库'),
+#         ('出库', '出库')
+#     ]
+#
+#     id = models.AutoField(primary_key=True)  # 主键，自增
+#     item = models.ForeignKey(Material, on_delete=models.CASCADE, null=False)  # 物品编号，外键关联到Material表
+#     type = models.CharField(max_length=10, choices=TYPE_CHOICES, null=False, blank=False)  # 出入库类型
+#     time = models.DateTimeField(auto_now_add=True)  # 出入库时间，自动添加当前时间
+#     member = models.ForeignKey(Member, on_delete=models.CASCADE, null=False)  # 操作员工编号，外键关联Member表
+#     remarks = models.CharField(max_length=300, null=True, blank=True)  # 备注信息
+#     approval = models.ForeignKey(ApprovalRecord, on_delete=models.CASCADE, null=True, blank=True)  # 审批记录编号，外键关联到ApprovalRecord表
+#
+#     def __str__(self):
+#         return f"{self.type} - {self.item.name} - {self.time}"
+#
+#     class Meta:
+#         db_table = 'inventory_record'  # 指定数据库表名
 
 class MaintenanceRecord(models.Model):
     # 物资维护记录

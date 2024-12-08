@@ -30,7 +30,9 @@ ALLOWED_HOSTS = [
     'localhost',       # Allows requests from localhost
     '127.0.0.1',
     '10.193.115.252',
-    '10.192.213.82',
+    '10.192.213.82',#hry
+    '10.192.135.221',#hry
+    '59.110.236.209'
 ]
 
 
@@ -122,14 +124,14 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
-
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+LANGUAGE_CODE = 'zh-hans'
+TIME_ZONE = 'Asia/Shanghai'
 
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/

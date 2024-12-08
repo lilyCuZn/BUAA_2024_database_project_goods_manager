@@ -6,12 +6,14 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Q
 
 from . import models
 import hashlib
 from django.shortcuts import render
 
-from .models import Member, Department, ApprovalRecord, UserApplication
+from .models import Member, Department, ApprovalRecord, UserApplication, Category, Supplier, PurchaseOrder, Material, \
+    LeaseReturn
 
 
 @csrf_exempt
@@ -49,12 +51,39 @@ def process_frontend(request):
             return applyBySellers(request)
         elif action == 'getUserLeaseApplies':
             return getAppliesBySeller(request)
+        #------------以下为物资管理部门功能--------------
+        elif action == 'getGoods':
+            return getAllMaterials(request)
+        #-----------以下为采购部门功能---------------
+        elif action == 'createPurchaseApplication':
+            return addApprovalRecord_purchase(request)
+        elif action == 'getPurchaseApplications':
+            return getApprovalRecord_purchase(request)
+        elif action == 'createPurchaseRecord':
+            return addPurchaseOrder(request)
+        elif action == 'getPurchaseRecords':
+            return getAllPurchaseOrder(request)
+        elif action == 'completePurchaseRecord':
+            return completePurchaseOrder(request)
+        #------------以下为审批部门功能-------------
+        elif action == 'getPendingApproves':
+            return getApprovalRecords_Status_approve(request)
+        elif action == 'modifyApprove':
+            return modifyApproveRecords_approve(request)
+        elif action == 'getStorageApproves':
+            return getApprovalRecord_storage(request)
+        elif action == 'getPurchaseApproves':
+            return getApprovalRecord_purchase(request)
     else:
         print("noPost")
 
     return JsonResponse({'result': False})
 
 def login(request):
+    leaseReturns = LeaseReturn.objects.all()
+    for leaseReturn in leaseReturns:
+        leaseReturn.checkOverdue()
+
     if request.method == 'POST':
         data = json.loads(request.body)
         id = data.get('id') # id
@@ -233,13 +262,16 @@ def applyBySellers(request): #发起一个申请
     print(phone)
     message = data.get('goodsInfo') #物资信息
     usage = data.get('goodsUsage') #物资用途
+    type = data.get('type')
+    print(type)
     userApplication = UserApplication(
         #id = id,
         userId=userId,
         phone = phone,
         message = message,
         usage = usage,
-        status = '待确认'
+        status = '待确认',
+        type = type
     )
     userApplication.save()
     return JsonResponse({
@@ -272,7 +304,7 @@ def getAppliesBySeller(request): #获取某个销售人员所写的申请
 
 
 #------------------------------物资管理部门功能----------------------------------------------------
-def getAllApplications(request): # 看到所有的物资申请
+def getAllApplications_goods_from_seller(request): # 看到所有的物资申请（来自物流部门）
     applications = UserApplication.objects
     applications_list = [
         {
@@ -291,34 +323,241 @@ def getAllApplications(request): # 看到所有的物资申请
         'applications':applications_list,
     })
 
-def applyMaintain(request): #发起维护审批
+def getApprovalRecord_storage(request): #得到物资管理部门的所有审批记录
+    records = ApprovalRecord.objects.filter(
+        Q(operation_type='物资报废申请') | Q(operation_type='物资维修申请'))
+    records_list = [
+        {
+            'id': record.id,
+            'operation_type': record.operation_type,
+            'status': record.status,
+            'created_time': record.created_time.strftime('%Y-%m-%d %H:%M'),
+            'updated_time': record.updated_time.strftime('%Y-%m-%d %H:%M'),
+            'applicant': record.applicant.to_dict(),
+            'description': record.description,
+            'approver': record.approver.to_dict() if record.approver is not None else None,
+            'reply': record.reply
+        }
+        for record in records
+    ]
+    records_list.sort(key=lambda record: record['created_time'])
+    applications = records_list
+    print(applications)
+    return JsonResponse({'result': 'success', 'applications': applications})
+
+def addApprovalRecord_storage(request): #物资管理部门新增审批（物资报废or物资维修申请）
     return HttpResponse('yeah')
     data = json.loads(request.body)
-    applier = data.get('applier') #申请人
-    department = data.get('department')
-    time = data.get('time')
-    opType = data.get('opType')
-    opInfo = data.get('opInfo')
+    applicant_id = data.get('applicant').get('id')  # 申请人编号
+    applicant = Member.objects.get(id=applicant_id)  # 申请人编号，外键关联到Memember表
+    operation_type = data.get('operation_type')  # 操作类型
+    status = '待确认'  # 审批状态
+    description = data.get('description')  # 操作说明
+    approvalRecord = ApprovalRecord(
+        operation_type=operation_type,
+        status=status,
+        applicant=applicant,
+        description=description,
+    )
+    approvalRecord.save()
+    return JsonResponse({'result': 'success'})
+
+def getAllMaterials(request):
+    # 得到所有的物资列表
+    materials = Material.objects.all()
+    material_list = [
+        {
+            'id':material.id,
+            'category': str(material.category) ,# 物资类别编号，外键关联到Category表
+            'status':material.status, # 物品状态
+            'damage_degree': material.damage_degree,  # 损坏程度
+            'purchaseId':str(material.purchase_order.id)  # 订购订单，外键关联到PurchaseOrder表
+        }
+        for material in materials
+    ]
+    return JsonResponse({'result':'success', 'goods':material_list})
 
 
+#--------------------------采购部门功能------------------------------------------------------
+def addApprovalRecord_purchase(request): #新增采购审批
+    data  = json.loads(request.body)
+    data = data.get('application')
+    applicant_id = data.get('applicant').get('id') #申请人编号
+    operation_type = '物资采购申请' # 操作类型
+    status = '待确认'  # 审批状态
+    applicant = Member.objects.get(id=applicant_id)  # 申请人编号，外键关联到Member表
+    description = data.get('description')  # 操作说明
+    # approver = models.ForeignKey(Member, related_name='approver_records', on_delete=models.CASCADE,
+    #                              null=False)  # 审批人编号，外键关联到Member表
+    # reply = models.CharField(max_length=300, null=False, blank=False)  # 答复
+    approvalRecord = ApprovalRecord(
+        operation_type = operation_type,
+        status = status,
+        applicant = applicant,
+        description = description,
+    )
+    approvalRecord.save()
+    return JsonResponse({'result':'success'})
+
+def getApprovalRecord_purchase(request): #查看所有的采购审批
+    print('purchase_approve')
+    records = ApprovalRecord.objects.filter(operation_type='物资采购申请')
+    records_list = [
+        {
+            'id': record.id,
+            'operation_type': record.operation_type,
+            'status': record.status,
+            'created_time': record.created_time.strftime('%Y-%m-%d %H:%M'),
+            'updated_time': record.updated_time.strftime('%Y-%m-%d %H:%M'),
+            'applicant': record.applicant.to_dict(),
+            'description': record.description,
+            'approver': record.approver.to_dict() if record.approver is not None else None,
+            'reply': record.reply
+        }
+        for record in records
+    ]
+    records_list.sort(key=lambda record: record['created_time'])
+    applications = records_list
+    print(applications)
+    return JsonResponse({'result': 'success', 'applications': applications})
+
+def addPurchaseOrder(request): #发起采购订单
+    data = json.loads(request.body)
+    data = data.get('record')
+    memberId = data.get('userId')
+    categoryName = data.get('goods_type')
+    supplierName = data.get('provider')
+    print(supplierName)
+    quantity = data.get('goods_num')
+    status = '采购中'  # 订单状态
+    approvalId = data.get('approve_id')  # 审批记录编号，外键关联到ApprovalRecord表
+    category = None
+    try:
+        category = Category.objects.get(name=categoryName)
+    except Category.DoesNotExist:
+        category = Category(
+            name = categoryName
+        )
+        category.save()
+
+    supplier = None
+    try:
+        supplier = Supplier.objects.get(name=supplierName)
+    except Supplier.DoesNotExist:
+        supplier = Supplier(
+            name = supplierName
+        )
+        supplier.save()
+
+    member = Member.objects.get(id=memberId)
+    approval = ApprovalRecord.objects.get(id=approvalId)
+
+    purchaseOrder = PurchaseOrder(
+        member = member,
+        category = category,  # 物资类别编号，外键关联到Category表
+        supplier = supplier,  # 供应商编号，外键关联到Supplier表
+        quantity = quantity,  # 实际数量
+        status = status,  # 订单状态
+        approval = approval  # 审批记录编号，外键关联到ApprovalRecord表
+    )
+    purchaseOrder.save()
+    return JsonResponse({"result":"success"})
+
+
+def getAllPurchaseOrder(request):
+    # 获取所有的采购订单，优先放采购中的，status相同按照时间先后排序
+    orders = PurchaseOrder.objects.all()
+    sorted_orders = sorted(
+        orders,
+        key=lambda order: (order.status != '采购中', order.create_time)
+    )
+    orders_list = [
+        {
+            'id' :order.id,  # 主键，自增
+            'applicant':order.member.to_dict(),
+            'goods_type' :str(order.category),  # 物资类别编号，外键关联到Category表
+            'provider' :str(order.supplier),  # 供应商编号，外键关联到Supplier表
+            'created_time' : order.create_time.strftime('%Y-%m-%d %H:%M'),  # 创建时间，自动添加当前时间
+            'completed_time' : order.finish_time.strftime('%Y-%m-%d %H:%M') if order.finish_time != None else None,  # 完成时间
+            'goods_num' : order.quantity,  # 实际数量
+            'status' : order.status,  # 订单状态
+            'approver' : str(order.approval) if order.approval != None else None # 审批记录编号，外键关联到ApprovalRecord表
+        }
+        for order in sorted_orders
+    ]
+    print(orders_list)
+    return JsonResponse({'result':'success', 'orders':orders_list})
+
+def completePurchaseOrder(request): #完成一个采购订单
+    data = json.loads(request.body)
+    orderId = data.get('recordId')
+    order = PurchaseOrder.objects.get(id=orderId)
+    order.setFinish()
+    # 需要将采购的东西放进物资库里
+    num = order.quantity
+    for i in range(1, num):
+        material = Material(
+            category = order.category,  # 物资类别编号，外键关联到Category表
+            status = '库中',  # 物品状态
+            damage_degree = '完好',  # 损坏程度
+            purchase_order = order  # 订购订单，外键关联到PurchaseOrder表
+        )
+        material.save()
+    return JsonResponse({'result':'success'})
 
 #---------------------------审批部门功能--------------------------------------------------------
-def approve(request): #审批，应该是得到一个审批id
+def getApprovalRecords_Status_approve(request): #得到所有某种status的审批记录
     data = json.loads(request.body)
-    id = data.get('id')
-    # applier = data.get('applier')  # 申请人
-    # department = data.get('department')
-    # time = data.get('time')
-    # opType = data.get('opType')
-    # opInfo = data.get('opInfo')
-    # approver = data.get('approver') #审批人
-    # reply = data.get('reply')
-    # approveBoolean = data.get('approveBoolean') #是否通过
+    status = data.get('status')
+    records = ApprovalRecord.objects.filter(status = status)
+    records_list = [
+        {
+            'id': record.id,
+            'operation_type':record.operation_type,
+            'status':record.status,
+            'created_time':record.created_time.strftime('%Y-%m-%d %H:%M'),
+            'updated_time':record.updated_time.strftime('%Y-%m-%d %H:%M'),
+            'applicant':record.applicant.to_dict(),
+            'description':record.description,
+            'approver':record.approver.to_dict() if record.approver is not None else None,
+            'reply':record.reply
+        }
+        for record in records
+    ]
+    records_list.sort(key=lambda record: record['created_time'])
+    print(records_list)
+    print("success")
+    return JsonResponse({'result': 'success', 'applications': records_list})
+
+
+def getApprovalRecords_Department(request): #得到某个部门所有的审批记录
+    data = json.loads(request.body)
+    department = data.get('department')
+    if department == '采购部门':
+        return getApprovalRecord_purchase(request)
+    elif department == '物资管理部门':
+        return getApprovalRecord_storage(request)
+    else:
+        return JsonResponse({"result":"invalid department"})
+
+
+def modifyApproveRecords_approve(request): #审批，应该是得到一个审批id
+    data = json.loads(request.body)
+    data = data.get('approve')
+
+    recordId = data.get('id')
+    print(recordId)
+    approver = data.get('approver')
+    print(approver)
+    approverId = approver.get('id')
+    print(approverId)
+    reply = data.get('reply')
+    status = data.get('status')
     try:
-        approveRecord = ApprovalRecord.objects.get(id=id)
-        approver = data.get('approver')  # 审批人
-        reply = data.get('reply')
-        approveBoolean = data.get('approveBoolean') #是否通过
+        approver = Member.objects.get(id=approverId)
+        record = ApprovalRecord.objects.get(id=recordId)
+        record.update(approver, reply, status)
+        return JsonResponse({'result':'success'})
     except ApprovalRecord.DoesNotExist:
         return JsonResponse({"result":"invalid id"}
     )

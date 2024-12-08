@@ -1,4 +1,5 @@
 import json
+from datetime import timezone, timedelta
 
 from django.db import models
 
@@ -8,6 +9,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from datetime import datetime
 
 class Department(models.Model):
     # 部门
@@ -63,9 +65,6 @@ class Member(models.Model):
             'identity':self.identity
         }
 
-    def to_json(self):
-        return json.dumps(self.to_dict())
-
     def check_password(self, password):
         return self.password == password
 
@@ -97,7 +96,7 @@ class Category(models.Model):
     # 物资类别
     id = models.AutoField(primary_key=True)  # 主键，自增
     name = models.CharField(max_length=30, null=False, blank=False)  # 分类名称
-    threshold = models.IntegerField(null=False, blank=False)  # 警告阈值
+    threshold = models.IntegerField(null=True, blank=False)  # 警告阈值
 
     def __str__(self):
         return self.name
@@ -108,36 +107,34 @@ class Category(models.Model):
 class ApprovalRecord(models.Model): # 审批记录
     OPERATION_TYPE_CHOICES = [
         ('PURCHASE_REQUEST', '物资采购申请'),
-        ('INBOUND', '物资入库'),
-        ('OUTBOUND', '物资出库'),
-        ('DISPOSAL', '物资报废'),
-        ('MAINTENANCE', '物资维修'),
-        ('TRANSFER', '物资转移')
+        ('DISPOSAL', '物资报废申请'),
+        ('MAINTENANCE', '物资维修申请'),
     ]
 
     STATUS_CHOICES = [
-        ('PENDING_SUBMISSION', '待提交'),
-        ('PENDING_APPROVAL', '待审批'),
-        ('IN_APPROVAL', '审批中'),
-        ('APPROVED', '已批准'),
-        ('REJECTED', '已拒绝'),
-        ('CANCELLED', '已取消'),
-        ('COMPLETED', '已完成'),
-        ('RETURNED_FOR_REVISION', '退回修改')
+        ('WAITING', '待确认'),
+        ('REFUSE', '拒绝'),
+        ('APPROVAL', '同意'),
     ]
 
     id = models.AutoField(primary_key=True)  # 主键，自增
-    operation_type = models.CharField(max_length=30, choices=OPERATION_TYPE_CHOICES, null=False, blank=False)  # 操作类型
-    status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=False, blank=False)  # 审批状态
+    operation_type = models.CharField(max_length=30, choices=OPERATION_TYPE_CHOICES, null=False, blank=True)  # 操作类型
+    status = models.CharField(max_length=30, choices=STATUS_CHOICES, null=False, blank=True)  # 审批状态
     created_time = models.DateTimeField(auto_now_add=True)  # 创建时间，自动添加当前时间
     updated_time = models.DateTimeField(auto_now=True)  # 更新时间，自动更新为当前时间
     applicant = models.ForeignKey(Member, related_name='applicant_records', on_delete=models.CASCADE, null=False)  # 申请人编号，外键关联到Memember表
-    description = models.CharField(max_length=300, null=False, blank=False)  # 操作说明
-    approver = models.ForeignKey(Member, related_name='approver_records', on_delete=models.CASCADE, null=False)  # 审批人编号，外键关联到Member表
-    reply = models.CharField(max_length=300, null=False, blank=False)  # 答复
+    description = models.CharField(max_length=300, null=True, blank=True)  # 操作说明
+    approver = models.ForeignKey(Member, related_name='approver_records', on_delete=models.CASCADE, null=True)  # 审批人编号，外键关联到Member表
+    reply = models.CharField(max_length=300, null=False, blank=True)  # 答复
 
     def __str__(self):
         return f"审批记录 - {self.operation_type} - {self.status}"
+
+    def update(self, approver, reply, status):
+        self.approver = approver
+        self.reply = reply
+        self.status = status
+        self.save()
 
     class Meta:
         db_table = 'approval_record'  # 指定数据库表名
@@ -159,14 +156,15 @@ class Material(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)  # 主键，自增
-    name = models.CharField(max_length=30, null=False, blank=False)  # 物资名称
+    #name = models.CharField(max_length=30, null=False, blank=False)  # 物资名称
     category = models.ForeignKey(Category, on_delete=models.CASCADE, null=False)  # 物资类别编号，外键关联到Category表
     # CASCADE: 当关联的对象被删除时，所有依赖于它的对象也将被自动删除
-    price = models.FloatField(null=False, blank=False)  # 价格
-    location = models.ForeignKey("Location", on_delete=models.CASCADE, null=False)  # 位置编号，外键关联到Location表
+    #price = models.FloatField(null=True, blank=False)  # 价格（删掉）
+    #location = models.ForeignKey("Location", on_delete=models.CASCADE, null=False)  # 位置编号，外键关联到Location表
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, null=False, blank=False)  # 物品状态
     damage_degree = models.CharField(max_length=20, choices=DAMAGE_DEGREE_CHOICES, null=False, blank=False)  # 损坏程度
     purchase_order = models.ForeignKey("PurchaseOrder", on_delete=models.CASCADE, null=False)  # 订购订单，外键关联到PurchaseOrder表
+
 
     def __str__(self):
         return self.name
@@ -222,26 +220,30 @@ class UserApplication(models.Model): #用户申请
         verbose_name = "用户申请"
         verbose_name_plural = "用户申请"
 
-# class InventoryRecord(models.Model):
-#     # 出入库记录
-#     TYPE_CHOICES = [
-#         ('入库', '入库'),
-#         ('出库', '出库')
-#     ]
-#
-#     id = models.AutoField(primary_key=True)  # 主键，自增
-#     item = models.ForeignKey(Material, on_delete=models.CASCADE, null=False)  # 物品编号，外键关联到Material表
-#     type = models.CharField(max_length=10, choices=TYPE_CHOICES, null=False, blank=False)  # 出入库类型
-#     time = models.DateTimeField(auto_now_add=True)  # 出入库时间，自动添加当前时间
-#     member = models.ForeignKey(Member, on_delete=models.CASCADE, null=False)  # 操作员工编号，外键关联Member表
-#     remarks = models.CharField(max_length=300, null=True, blank=True)  # 备注信息
-#     approval = models.ForeignKey(ApprovalRecord, on_delete=models.CASCADE, null=True, blank=True)  # 审批记录编号，外键关联到ApprovalRecord表
-#
-#     def __str__(self):
-#         return f"{self.type} - {self.item.name} - {self.time}"
-#
-#     class Meta:
-#         db_table = 'inventory_record'  # 指定数据库表名
+
+class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）为主键，标识某个租赁记录
+    LEASE_RETURN_STATUS = [
+        ('LEASING', '租赁中'),
+        ('RETURNED', '已归还'),
+        ('LOST', '已丢失'),
+        ('OVERDUE', '已逾期')
+    ]
+
+    id = models.AutoField(primary_key=True)  # 主键，自增
+    userApplyId =models.ForeignKey(UserApplication, on_delete=models.CASCADE, null=False) # 申请id
+    materialId = models.ForeignKey(Material, on_delete=models.CASCADE, null=False) # 物品id
+    status = models.CharField(max_length=20, choices=LEASE_RETURN_STATUS, null=False, blank=False) #当前状态
+    leaseTime = models.DateTimeField(auto_now_add=True)  # 租赁时间
+    returnTime = models.DateTimeField(null = True) #归还时间
+
+    class Meta:
+        db_table = 'LeaseReturn'
+
+    def checkOverdue(self):
+        time = datetime.now()
+        if ((time-self.leaseTime) >= timedelta(days=30)):
+            self.status = '已逾期'
+            self.save()
 
 class MaintenanceRecord(models.Model):
     # 物资维护记录
@@ -263,9 +265,9 @@ class Supplier(models.Model):
     # 供应商
     id = models.AutoField(primary_key=True)  # 主键，自增
     name = models.CharField(max_length=50, null=False, blank=False)  # 供应商名称
-    phone = models.CharField(max_length=20, null=False, blank=False)  # 联系电话
+    phone = models.CharField(max_length=20, null=True, blank=False)  # 联系电话
     email = models.CharField(max_length=50, null=True, blank=True)  # 联系邮箱
-    address = models.CharField(max_length=200, null=False, blank=False)  # 地址
+    address = models.CharField(max_length=200, null=True, blank=False)  # 地址
 
     def __str__(self):
         return self.name
@@ -291,11 +293,10 @@ class PurchaseOrder(models.Model):
     STATUS_CHOICES = [
         ('PROCURING', '采购中'),
         ('PROCURED', '已采购'),
-        ('OVERDUE', '逾期'),
-        ('UNQUALIFIED', '未满足要求的，与审批记录不相符')
     ]
 
     id = models.AutoField(primary_key=True)  # 主键，自增
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, null=False)  # 物资类别编号，外键关联到Category表
     supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, null=False)  # 供应商编号，外键关联到Supplier表
     create_time = models.DateTimeField(auto_now_add=True)  # 创建时间，自动添加当前时间
@@ -305,7 +306,12 @@ class PurchaseOrder(models.Model):
     approval = models.ForeignKey(ApprovalRecord, on_delete=models.CASCADE, null=False)  # 审批记录编号，外键关联到ApprovalRecord表
 
     def __str__(self):
-        return f"采购订单 - {self.category.name} - {self.supplier.name} - {self.status}"
+        return self.id
+
+    def setFinish(self):
+        self.status = '已采购'
+        self.finish_time = datetime.now()
+        self.save()
 
     class Meta:
         db_table = 'purchase_order'  # 指定数据库表名

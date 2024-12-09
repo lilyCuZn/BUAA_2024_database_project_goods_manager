@@ -469,7 +469,7 @@ def getMaterialsFromMaintainId(request): #根据维护记录的id，返回这次
         materialList.append(material.to_dict())
 
     print(materialList)
-    materialList.sort(key=lambda material:int(material['id']))
+    materialList.sort(key=lambda material:(material['status']!='维护中', int(material['id'])))
     print(materialList)
     print('success')
     return JsonResponse({'result':'success', 'goods':materialList})

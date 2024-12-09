@@ -101,6 +101,12 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+    def to_dict(self):
+        return {
+            'id':self.id,
+            'name':self.name,
+        }
+
     class Meta:
         db_table = 'category'  # 指定数据库表名
 
@@ -144,11 +150,11 @@ class Material(models.Model):
         ('BORROWING', '租赁中'),
         ('IN_MAINTENANCE', '维护中'),
         ('DAMAGE', '损坏'),
-        ('THROWN', '已报废')
+        ('LOST', '已丢失'),
+        ('THROWN', '已报废'),
     ]
 
     id = models.AutoField(primary_key=True)  # 主键，自增
-    #name = models.CharField(max_length=30, null=False, blank=False)  # 物资名称
     category = models.ForeignKey(Category, on_delete=models.CASCADE, null=False)  # 物资类别编号，外键关联到Category表
     # CASCADE: 当关联的对象被删除时，所有依赖于它的对象也将被自动删除
     #price = models.FloatField(null=True, blank=False)  # 价格（删掉）
@@ -184,40 +190,56 @@ class ApplicationType(models.TextChoices):
 
 class ApplyStatusType(models.TextChoices):
     WAITING = '待确认'
-    APPROVE = '通过'
+    LEASING = '租赁中'
     REFUSE = '拒绝'
+    RETURNING = '归还中'
+    RETURN = '已结束'
 
-class UserApplication(models.Model): #用户申请
+class LeaseApply(models.Model): #用户申请租赁
     id = models.AutoField(primary_key=True)  # 主键，自增
     userId = models.ForeignKey(Member, on_delete=models.CASCADE, null=True)  # 用户id
-    type = models.CharField(
-        max_length=3,
-        choices=ApplicationType.choices,
-        null=False,
-        blank=False,
-        verbose_name="申请类型"
-    )  # 申请类型
     phone = models.CharField(max_length=11, null=True, blank=False, verbose_name="电话号码")  # 电话号码（作为字符串处理以保留前导零）
-    message = models.CharField(max_length=300, null=True, blank=False, verbose_name="物资信息")  # 物资信息
+    message = models.CharField(max_length=300, null=True, blank=False, verbose_name="物资信息")  # 物资信息（如“要十个篮球”）
     usage = models.CharField(max_length=300, null=True, blank=False, verbose_name="物资用途")  # 物资用途
     status = models.CharField(
         max_length = 4,
         choices=ApplyStatusType.choices,
         null = True,
     ) #申请状态
+    returnMessage = models.CharField(max_length=300, null=True) # 归还时的物资状态, 由物资管理部门来填
+    createdTime = models.DateTimeField(auto_now_add=True)
+    finishTime = models.DateTimeField(null = True) #完成时间
 
     def __str__(self):
         return f"用户申请 - {self.name} - {self.get_type_display()}"
+
+    def setStatus(self, status):
+        self.status = status
+        self.save()
+
+    def setReturnMessage(self, message):
+        self.returnMessage = message
+        self.save()
+
+    def setFinish(self):
+        self.finishTime = datetime.now()
+        self.save()
+
+    def setReturning(self): # 外联部门表示这个申请正在归还，递交给物资管理部门对物资进行检查
+        self.status = '归还中'
+        self.save()
 
     def to_dict(self):
         return ({
             'id':self.id,
             'userId':str(self.userId),
-            'type':self.type,
             'phone':self.phone,
             'message':self.message,
             'usage':self.usage ,
-            'status':self.status
+            'status':self.status,
+            'returnMessage':self.returnMessage,
+            'createdTime':self.createdTime,
+            'completedTime':self.finishTime
         })
 
     class Meta:
@@ -235,7 +257,7 @@ class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）�
     ]
 
     id = models.AutoField(primary_key=True)  # 主键，自增
-    userApplyId =models.ForeignKey(UserApplication, on_delete=models.CASCADE, null=False) # 申请id
+    userApplyId =models.ForeignKey(LeaseApply, on_delete=models.CASCADE, null=False) # 申请id
     materialId = models.ForeignKey(Material, on_delete=models.CASCADE, null=False) # 物品id
     status = models.CharField(max_length=20, choices=LEASE_RETURN_STATUS, null=False, blank=False) #当前状态
     leaseTime = models.DateTimeField(auto_now_add=True)  # 租赁时间
@@ -243,6 +265,14 @@ class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）�
 
     class Meta:
         db_table = 'LeaseReturn'
+
+    def setStatus(self, status):
+        self.status = status
+        self.save()
+
+    def setFinish(self):
+        self.returnTime = datetime.now()
+        self.save()
 
     def checkOverdue(self):
         time = datetime.now()
@@ -412,8 +442,8 @@ class StockWarning(models.Model):
     ]
 
     id = models.AutoField(primary_key=True)  # 主键，自增
-    item = models.ForeignKey(Material, on_delete=models.CASCADE, null=False)  # 物资编号，外键关联到Material表
-    type = models.CharField(max_length=20, choices=TYPE_CHOICES, null=False, blank=False)  # 警告类型
+    item = models.ForeignKey(Category, on_delete=models.CASCADE, null=False)  # 物资编号，外键关联到Category
+    type = '库存过低'  # 警告类型
 
     def __str__(self):
         return f"库存警告 - {self.item.name} - {self.type}"

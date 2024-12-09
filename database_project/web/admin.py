@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Member, Department, Category, ApprovalRecord, UserApplication
+from .models import Member, Department, Category, ApprovalRecord, LeaseApply
 from .models import Material, MaintainRecord
 from .models import Supplier, Supplier_Product, PurchaseOrder
 from .models import Warehouse, Zone, Shelf, Level
@@ -12,7 +12,7 @@ admin.site.register(Member)
 admin.site.register(Category)
 admin.site.register(ApprovalRecord)
 admin.site.register(Material)
-admin.site.register(UserApplication)
+admin.site.register(LeaseApply)
 admin.site.register(MaintainRecord)
 admin.site.register(Supplier)
 admin.site.register(Supplier_Product)

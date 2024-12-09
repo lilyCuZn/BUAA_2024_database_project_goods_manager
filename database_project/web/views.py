@@ -13,7 +13,7 @@ import hashlib
 from django.shortcuts import render
 
 from .models import Member, Department, ApprovalRecord, UserApplication, Category, Supplier, PurchaseOrder, Material, \
-    LeaseReturn
+    LeaseReturn, MaintainRecord, Maintain_Material_Result
 
 
 @csrf_exempt
@@ -46,15 +46,31 @@ def process_frontend(request):
             return add_member(request)
         elif action == 'deleteUser':
             return delete_member(request)
-        #------------以下为物流部门功能--------------
+        #------------以下为外联部门功能------------------------
         elif action == 'addLeaseApply':
             return applyBySellers(request)
         elif action == 'getUserLeaseApplies':
             return getAppliesBySeller(request)
-        #------------以下为物资管理部门功能--------------
+        #------------以下为物资管理部门功能----------------------
         elif action == 'getGoods':
             return getAllMaterials(request)
-        #-----------以下为采购部门功能---------------
+        elif action == 'getDamageGoods':
+            return getAllDamageMaterials(request)
+        elif action == 'createMaintainApplication':
+            return addApprovalRecord_maintain(request)
+        elif action == 'getMaintainApplications':
+            return getApprovalRecord_maintain(request)
+        elif action == 'createMaintainRecord':
+            return addMaintainRecord(request)
+        elif action == 'getMaintainRecords':
+            return getMaintainRecords_all(request)
+        elif action == 'getRecordGoods':
+            return getMaterialsFromMaintainId(request)
+        elif action == 'maintainGoods':
+            return setMaintainResult(request)
+        elif action == 'completeMaintainRecord':
+            return setMainRecordStatusFinish(request)
+        #-----------以下为采购部门功能------------------------------
         elif action == 'createPurchaseApplication':
             return addApprovalRecord_purchase(request)
         elif action == 'getPurchaseApplications':
@@ -71,7 +87,7 @@ def process_frontend(request):
         elif action == 'modifyApprove':
             return modifyApproveRecords_approve(request)
         elif action == 'getStorageApproves':
-            return getApprovalRecord_storage(request)
+            return getApprovalRecord_maintain(request)
         elif action == 'getPurchaseApproves':
             return getApprovalRecord_purchase(request)
     else:
@@ -304,7 +320,7 @@ def getAppliesBySeller(request): #获取某个销售人员所写的申请
 
 
 #------------------------------物资管理部门功能----------------------------------------------------
-def getAllApplications_goods_from_seller(request): # 看到所有的物资申请（来自物流部门）
+def getAllApplications_goods_from_seller(request): # 看到所有的物资申请（来自外联部门）
     applications = UserApplication.objects
     applications_list = [
         {
@@ -323,9 +339,8 @@ def getAllApplications_goods_from_seller(request): # 看到所有的物资申请
         'applications':applications_list,
     })
 
-def getApprovalRecord_storage(request): #得到物资管理部门的所有审批记录
-    records = ApprovalRecord.objects.filter(
-        Q(operation_type='物资报废申请') | Q(operation_type='物资维修申请'))
+def getApprovalRecord_maintain(request): #得到物资管理部门的所有审批记录
+    records = ApprovalRecord.objects.filter(operation_type='物资维护申请')
     records_list = [
         {
             'id': record.id,
@@ -340,17 +355,19 @@ def getApprovalRecord_storage(request): #得到物资管理部门的所有审批
         }
         for record in records
     ]
-    records_list.sort(key=lambda record: record['created_time'])
+    records_list.sort(
+        key=lambda record: (record['status'] != '待确认', record['created_time'])
+    )
     applications = records_list
     print(applications)
     return JsonResponse({'result': 'success', 'applications': applications})
 
-def addApprovalRecord_storage(request): #物资管理部门新增审批（物资报废or物资维修申请）
-    return HttpResponse('yeah')
+def addApprovalRecord_maintain(request): #物资管理部门新增审批（物资维护申请）
     data = json.loads(request.body)
-    applicant_id = data.get('applicant').get('id')  # 申请人编号
+    data = data.get('application')
+    applicant_id = data.get('userId')  # 申请人编号
     applicant = Member.objects.get(id=applicant_id)  # 申请人编号，外键关联到Memember表
-    operation_type = data.get('operation_type')  # 操作类型
+    operation_type = '物资维护申请'  # 操作类型
     status = '待确认'  # 审批状态
     description = data.get('description')  # 操作说明
     approvalRecord = ApprovalRecord(
@@ -370,12 +387,119 @@ def getAllMaterials(request):
             'id':material.id,
             'category': str(material.category) ,# 物资类别编号，外键关联到Category表
             'status':material.status, # 物品状态
-            'damage_degree': material.damage_degree,  # 损坏程度
             'purchaseId':str(material.purchase_order.id)  # 订购订单，外键关联到PurchaseOrder表
         }
         for material in materials
     ]
     return JsonResponse({'result':'success', 'goods':material_list})
+
+def getAllDamageMaterials(request): #得到所有状态为损坏的material
+    materials = Material.objects.filter(status='损坏')
+    material_list = [
+        {
+            'id': material.id,
+            'category': str(material.category),  # 物资类别编号，外键关联到Category表
+            'status': material.status,  # 物品状态
+            'purchaseId': str(material.purchase_order.id)  # 订购订单，外键关联到PurchaseOrder表
+        }
+        for material in materials
+    ]
+    return JsonResponse({'result': 'success', 'goods': material_list})
+
+
+def addMaintainRecord(request): #添加物资维护记录
+    data = json.loads(request.body)
+    data = data.get('record')
+    materialIds = data.get('goods') #物资编号们
+    print(materialIds)
+    memberId = data.get('userId')  # 维护人员编号，外键关联到Member表
+    member = Member.objects.get(id=memberId)
+    approvalId = data.get('approveId')  # 审批记录编号，外键关联到ApprovalRecord表
+    approval = ApprovalRecord.objects.get(id=approvalId)
+
+    maintainRecord = MaintainRecord(
+        member=member,
+        approval=approval,
+        status='未完成'
+    )
+    maintainRecord.save()
+
+    for materialId in materialIds:
+        material = Material.objects.get(id=materialId)
+        material.setStatus('维护中')
+
+        maintain_material_result = Maintain_Material_Result(
+            maintainId = maintainRecord,
+            materialId= material,
+            # result = null
+        )
+        maintain_material_result.save()
+
+    return JsonResponse({'result':'success'})
+
+
+def getMaintainRecords_all(request): # 得到所有的维护记录
+    maintainRecords = MaintainRecord.objects.all()
+    record_list = [
+        {
+            'id': record.id,  # 主键，自增
+            'createdTime': record.createdTime.strftime('%Y-%m-%d %H:%M'),
+            'completedTime':record.finishTime.strftime('%Y-%m-%d %H:%M') if record.finishTime != None else '',
+            'applicant': record.member.to_dict(),
+            'applicationId': str(record.approval),
+            'status': record.status,
+        }
+        for record in maintainRecords
+    ]
+    print(record_list)
+    record_list.sort(key=lambda record:(record['status'] != '未完成', record['createdTime']))
+    print(record_list)
+    print('success')
+    return JsonResponse({'result':'success', 'record_list':record_list})
+
+
+def getMaterialsFromMaintainId(request): #根据维护记录的id，返回这次维护的目标material
+    data = json.loads(request.body)
+    maintainId = data.get('recordId')
+    maintainRecord = MaintainRecord.objects.get(id=maintainId)
+    maintain_material_results = Maintain_Material_Result.objects.filter(maintainId = maintainRecord)
+    materialList = []
+    for maintain_material_result in maintain_material_results:
+        material = maintain_material_result.materialId
+        materialList.append(material.to_dict())
+
+    print(materialList)
+    materialList.sort(key=lambda material:int(material['id']))
+    print(materialList)
+    print('success')
+    return JsonResponse({'result':'success', 'goods':materialList})
+
+def setMaintainResult(request): # 维护后，对单个物资设置维护结果（修缮or报废）
+    data = json.loads(request.body)
+    maintainId = data.get('maintainId')
+    print(maintainId)
+    maintain = MaintainRecord.objects.get(id=maintainId)
+    materialId = data.get('goodsId')
+    print(materialId)
+    material = Material.objects.get(id=materialId)
+    result = data.get('result')
+
+    maintain_material_result = Maintain_Material_Result.objects.get(maintainId=maintain, materialId=material)
+    maintain_material_result.setResult(result)
+
+    materialStatus = ''
+    if result == '修缮':
+        materialStatus = '库中'
+    elif result == '报废':
+        materialStatus = '已报废'
+    material.setStatus(materialStatus)
+    return JsonResponse({'result':'success'})
+
+def setMainRecordStatusFinish(request): #维护完一整个维护清单后，设置已完成
+    data = json.loads(request.body)
+    maintainId = data.get('maintainId')
+    maintain = MaintainRecord.objects.get(id=maintainId)
+    maintain.setFinish()
 
 
 #--------------------------采购部门功能------------------------------------------------------
@@ -416,7 +540,9 @@ def getApprovalRecord_purchase(request): #查看所有的采购审批
         }
         for record in records
     ]
-    records_list.sort(key=lambda record: record['created_time'])
+    records_list.sort(
+        key=lambda record: (record['status'] != '待确认', record['created_time'])
+    )
     applications = records_list
     print(applications)
     return JsonResponse({'result': 'success', 'applications': applications})
@@ -499,7 +625,6 @@ def completePurchaseOrder(request): #完成一个采购订单
         material = Material(
             category = order.category,  # 物资类别编号，外键关联到Category表
             status = '库中',  # 物品状态
-            damage_degree = '完好',  # 损坏程度
             purchase_order = order  # 订购订单，外键关联到PurchaseOrder表
         )
         material.save()
@@ -536,7 +661,7 @@ def getApprovalRecords_Department(request): #得到某个部门所有的审批�
     if department == '采购部门':
         return getApprovalRecord_purchase(request)
     elif department == '物资管理部门':
-        return getApprovalRecord_storage(request)
+        return getApprovalRecord_maintain(request)
     else:
         return JsonResponse({"result":"invalid department"})
 

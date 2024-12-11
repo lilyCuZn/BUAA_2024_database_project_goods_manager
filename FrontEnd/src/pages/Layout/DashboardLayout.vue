@@ -20,7 +20,10 @@
       </sidebar-link>
       <sidebar-link
         to="/userManage"
-        v-if="this.$store.state.user.identity === '管理员'"
+        v-if="
+          this.$store.state.demo ||
+          this.$store.state.user.identity === '管理员'
+        "
       >
         <md-icon>manage_accounts</md-icon>
         <p>用户管理</p>
@@ -28,8 +31,9 @@
       <sidebar-link
         to="/approve"
         v-if="
+          this.$store.state.demo ||
           this.$store.state.user.department_name ===
-          '审批部门'
+            '审批部门'
         "
       >
         <md-icon>flaky</md-icon>
@@ -38,8 +42,9 @@
       <sidebar-link
         to="/lease"
         v-if="
+          this.$store.state.demo ||
           this.$store.state.user.department_name ===
-          '外联部门'
+            '外联部门'
         "
       >
         <md-icon>sell</md-icon>
@@ -48,8 +53,9 @@
       <sidebar-link
         to="/purchase"
         v-if="
+          this.$store.state.demo ||
           this.$store.state.user.department_name ===
-          '采购部门'
+            '采购部门'
         "
       >
         <md-icon>shopping_bag</md-icon>
@@ -58,8 +64,9 @@
       <sidebar-link
         to="/warehouse"
         v-if="
+          this.$store.state.demo ||
           this.$store.state.user.department_name ===
-          '物资管理部门'
+            '物资管理部门'
         "
       >
         <md-icon>warehouse</md-icon>

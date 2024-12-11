@@ -96,7 +96,7 @@
           <template slot="footer">
             <div class="stats">
               <md-icon>date_range</md-icon>
-              已稳健运营{{ data.days }}天
+              已稳健运营{{ days }}天
             </div>
           </template>
         </stats-card>
@@ -299,6 +299,7 @@ export default {
           ],
         ],
       },
+      days: 114514,
       data: {
         goodsNumOfStorage: 65536,
         goodsNumOfLease: 32767,

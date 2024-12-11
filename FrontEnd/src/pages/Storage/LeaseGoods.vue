@@ -114,10 +114,14 @@ export default {
       let res = await this.$Backend(req);
       if (res && res.result === "success") {
         if (res.reply === "success") {
-          this.$notifyVue("租赁成功");
+          this.$notifyVue("租赁成功!");
           return "success";
         } else {
-          this.$notifyVue("租赁失败");
+          this.$notifyVue(
+            "库中物资不足，租赁失败！",
+            "danger",
+            "bottom"
+          );
           return "fail";
         }
       }

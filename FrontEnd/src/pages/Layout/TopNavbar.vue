@@ -34,6 +34,15 @@
               <md-tooltip>用户中心</md-tooltip>
             </md-icon>
           </md-button>
+          <md-button
+            class="md-just-icon md-simple"
+            @click="logout"
+          >
+            <md-icon
+              >logout
+              <md-tooltip>退出登录</md-tooltip>
+            </md-icon>
+          </md-button>
         </div>
       </div>
     </div>
@@ -67,6 +76,10 @@ export default {
       if (this.$route.path !== page) {
         this.$router.push(page);
       }
+    },
+    logout() {
+      this.$store.dispatch("logout");
+      this.$router.push("/signin");
     },
   },
 };

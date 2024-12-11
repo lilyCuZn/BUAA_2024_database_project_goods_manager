@@ -220,7 +220,6 @@
               justify-content: space-between;
               align-items: center;
             "
-            v-if="!isWorking"
           >
             <div>
               <md-button
@@ -244,6 +243,27 @@
                 >
               </md-button>
               <md-button
+                v-if="isDeleting || isResettingPassword"
+                class="md-just-icon md-success"
+                @click="selectAll"
+              >
+                <md-icon>select_all</md-icon>
+                <md-tooltip md-direction="top"
+                  >全部选择</md-tooltip
+                >
+              </md-button>
+              <md-button
+                v-if="isDeleting || isResettingPassword"
+                class="md-just-icon md-success"
+                @click="selectedUsers = []"
+              >
+                <md-icon>delete</md-icon>
+                <md-tooltip md-direction="top"
+                  >全部取消</md-tooltip
+                >
+              </md-button>
+              <md-button
+                v-if="!isWorking"
                 class="md-just-icon md-success"
                 @click="enableAdding"
                 ><md-icon>add</md-icon>
@@ -252,6 +272,7 @@
                 ></md-button
               >
               <md-button
+                v-if="!isWorking"
                 class="md-just-icon md-success"
                 @click="enableDeleting"
                 ><md-icon>remove</md-icon>
@@ -260,6 +281,7 @@
                 >
               </md-button>
               <md-button
+                v-if="!isWorking"
                 class="md-just-icon md-success"
                 @click="enableEditing"
                 ><md-icon>edit</md-icon
@@ -269,6 +291,7 @@
               >
 
               <md-button
+                v-if="!isWorking"
                 class="md-just-icon md-success"
                 @click="enableResettingPassword"
                 ><md-icon>lock_reset</md-icon
@@ -277,6 +300,7 @@
                 ></md-button
               >
               <md-button
+                v-if="!isWorking"
                 class="md-just-icon md-success"
                 @click="exportFilteredUsers"
                 ><md-icon>download</md-icon
@@ -293,6 +317,11 @@
                   totalPages
                 }}
                 页
+              </span>
+              <span
+                v-if="isDeleting || isResettingPassword"
+              >
+                ， 已选择 {{ selectedUsers.length }} 项
               </span>
             </div>
           </div>
@@ -559,18 +588,7 @@ export default {
         "外联部门",
         "全部部门",
       ],
-      users: [
-        {
-          id: "admin",
-          name: "admin",
-          identity: "管理员",
-          department_name_id: "采购部门",
-          email: "114514@buaa.edu.cn",
-          phone: "114514",
-          password: "password123",
-          modified: false,
-        },
-      ],
+      users: [],
       filters: {
         id: "",
         name: "",
@@ -584,7 +602,7 @@ export default {
       defaultNewUser: {
         name: "",
         identity: "普通用户",
-        department_name_id: "",
+        department_name_id: "物资管理部门",
         email: "",
         phone: "",
         password: "iloveworking",
@@ -613,7 +631,6 @@ export default {
     console.log("mounted");
     this.defaultNewUser.password = this.defaultPassword;
     this.filteredUsers = this.users;
-    this.addingUsers = [cloneDeep(this.defaultNewUser)];
     console.log(
       "this.defaultNewUser:",
       this.defaultNewUser
@@ -882,11 +899,10 @@ export default {
       for (const user of this.addingUsers) {
         console.log("adding", user);
         await this.addUser(user);
-        // this.users.push(user);
       }
       this.isAdding = false;
       this.addingUsers = [cloneDeep(this.defaultNewUser)];
-      this.$notifyVue("添加成功!");
+      this.$notifyVue("添加新用户成功!");
     },
     triggerFileInput() {
       this.$refs.fileInput.click();
@@ -950,11 +966,16 @@ export default {
             部门: item.department_name_id,
             邮箱: item.email,
             电话: item.phone,
-            密码: item.password,
           };
         }
       );
       this.$ExportFile(modifiedData, "用户信息.xlsx");
+      this.$notifyVue("导出成功!");
+    },
+    selectAll() {
+      this.selectedUsers = this.filteredUsers
+        .filter((user) => user.identity !== "管理员")
+        .map((user) => user.id);
     },
   },
 };

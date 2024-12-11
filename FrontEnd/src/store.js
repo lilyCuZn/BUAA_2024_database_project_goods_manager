@@ -5,7 +5,10 @@ import VuexPersistence from "vuex-persistedstate";
 Vue.use(Vuex);
 
 export default new Vuex.Store({
-  state: { user: null },
+  state: {
+    user: null,
+    demo: true,
+  },
   mutations: {
     setUser(state, obj) {
       console.log("setUser:");

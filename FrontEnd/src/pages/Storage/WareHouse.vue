@@ -111,6 +111,18 @@
           <md-tooltip md-direction="top">下一页</md-tooltip>
         </md-button>
         <md-button
+          v-if="
+            this.$store.state.user.identity === '管理员'
+          "
+          class="md-just-icon md-success"
+          @click="deleteGoods"
+        >
+          <md-icon>delete</md-icon>
+          <md-tooltip md-direction="top"
+            >删除报废、已丢失的物资</md-tooltip
+          >
+        </md-button>
+        <md-button
           class="md-just-icon md-success"
           @click="exportData"
         >
@@ -129,8 +141,6 @@
   </div>
 </template>
 <script>
-import { filter } from "lodash";
-
 export default {
   async mounted() {
     console.log("mounted");
@@ -219,6 +229,7 @@ export default {
       console.log("this.filters:", this.filters);
       this.currentPage = 1;
       this.filteredGoods = this.goods.filter((item) => {
+        console.log(item);
         return (
           (this.filters.id === "" ||
             item.id.includes(this.filters.id)) &&
@@ -254,6 +265,18 @@ export default {
         }
       } finally {
         this.isLoading = false;
+      }
+    },
+    async deleteGoods() {
+      console.log("deleteGoods");
+      let req = {
+        action: "deleteGoods",
+      };
+      console.log("req:", req);
+      let msg = await this.$Backend(req);
+      if (msg && msg.result === "success") {
+        console.log("deleteGoods success");
+        await this.updateGoods();
       }
     },
     exportData() {

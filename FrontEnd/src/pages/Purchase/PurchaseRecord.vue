@@ -21,6 +21,9 @@
             "
           >
             <div style="letter-spacing: 2px">
+              采购记录编号：
+              <span class="text-info">{{ item.id }}</span
+              >，
               <span class="text-success">{{
                 item.created_time
               }}</span>
@@ -33,7 +36,12 @@
               记录，状态为
               <span class="text-danger">{{
                 item.status
-              }}</span>
+              }}</span
+              ><span v-if="item.status === '已采购'"
+                >，完成时间为<span class="text-info">
+                  {{ item.completed_time }}</span
+                ></span
+              >
             </div>
           </md-table-cell>
           <div style="text-align: right">
@@ -68,15 +76,6 @@
           </div>
         </md-table-row>
         <div class="md-layout" v-if="focusedItem === item">
-          <div class="md-layout-item">
-            <md-field>
-              <label>采购记录编号</label>
-              <md-input
-                v-model="item.id"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
           <div class="md-layout-item">
             <md-field>
               <label>申请记录编号</label>
@@ -115,39 +114,6 @@
               ></md-input>
             </md-field>
           </div>
-
-          <div
-            class="md-layout-item md-small-size-100 md-size-50"
-          >
-            <md-field>
-              <label>创建时间</label>
-              <md-input
-                v-model="item.created_time"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>完成时间</label>
-              <md-input
-                v-model="item.completed_time"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>记录状态</label>
-              <md-input
-                v-model="item.status"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
         </div>
       </md-table>
     </div>
@@ -159,13 +125,6 @@
       "
     >
       <div>
-        <md-button
-          class="md-just-icon md-success"
-          @click="exportData"
-        >
-          <md-icon>download</md-icon>
-          <md-tooltip md-direction="top">导出</md-tooltip>
-        </md-button>
         <md-button
           class="md-just-icon md-success"
           @click="changePage(currentPage - 1)"
@@ -181,6 +140,13 @@
         >
           <md-icon>east</md-icon>
           <md-tooltip md-direction="top">下一页</md-tooltip>
+        </md-button>
+        <md-button
+          class="md-just-icon md-success"
+          @click="exportData"
+        >
+          <md-icon>download</md-icon>
+          <md-tooltip md-direction="top">导出</md-tooltip>
         </md-button>
       </div>
       <div>
@@ -268,7 +234,7 @@ export default {
     },
     exportData() {
       console.log("exportData");
-      const modifiedData = this.filteredUsers.map(
+      const modifiedData = this.purchaseRecords.map(
         (item) => {
           return {
             采购记录编号: item.id,
@@ -277,12 +243,13 @@ export default {
             物资类别: item.goods_type,
             物资数量: item.goods_num,
             创建时间: item.created_time,
-            完成时间: item.completed_time,
             记录状态: item.status,
+            完成时间: item.completed_time,
           };
         }
       );
-      this.$ExportFile(modifiedData, "采购记录表.txt");
+      this.$ExportFile(modifiedData, "采购记录表.xlsx");
+      this.$notifyVue("导出采购记录成功!");
     },
   },
 };

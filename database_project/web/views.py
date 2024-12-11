@@ -38,6 +38,8 @@ def process_frontend(request):
             return add_member(request)
         elif action == 'deleteUser':
             return delete_member(request)
+        elif action == 'deleteGoods':
+            return deleteScrapAndLostMaterials(request)
         # -------------------------------以下为外联部门功能------------------------
         elif action == 'addLeaseApply':
             return applyBySellers(request)
@@ -122,65 +124,7 @@ def process_frontend(request):
 import json
 
 
-# from pyecharts.charts import Bar, Pie
-# from pyecharts.faker import Faker
-# from pyecharts import options as opts
 
-
-# Create your views here.
-# def response_as_json(data):
-#     json_str = json.dumps(data)
-#     response = HttpResponse(
-#         json_str,
-#         content_type="application/json",
-#     )
-#     response["Access-Control-Allow-Origin"] = "*"
-#     return response
-#
-#
-# def json_response(data, code=200):
-#     data = {
-#         "code": code,
-#         "msg": "success",
-#         "data": data,
-#     }
-#     return response_as_json(data)
-#
-#
-# def json_error(error_string="error", code=500, **kwargs):
-#     data = {
-#         "code": code,
-#         "msg": error_string,
-#         "data": {}
-#     }
-#     data.update(kwargs)
-#     return response_as_json(data)
-#
-#
-# JsonResponse = json_response
-# JsonError = json_error
-#
-
-# def pie_base() -> Pie:
-#     c = (
-#         Pie()
-#         .add("", [list(z) for z in zip(Faker.choose(), Faker.values())])
-#         .set_colors(["blue", "green", "yellow", "red", "pink", "orange", "purple"])
-#         .set_global_opts(title_opts=opts.TitleOpts(title="Pie-示例"))
-#         .set_series_opts(label_opts=opts.LabelOpts(formatter="{b}: {c}"))
-#         .dump_options_with_quotes()
-#     )
-#     return c
-#
-#
-# class ChartView(APIView):
-#     def get(self, request, *args, **kwargs):
-#         return JsonResponse(json.loads(pie_base()))
-#
-#
-# class IndexView(APIView):
-#     def get(self, request, *args, **kwargs):
-#         return HttpResponse(content=open("./templates/index.html").read())
 
 
 # -----------------------------------------以下为所有用户功能---------------------------------------------------------------
@@ -366,6 +310,18 @@ def delete_member(request):
         return JsonResponse({'result': 'invalid account'})
 
 
+def deleteScrapAndLostMaterials(request): #删除报废、丢失的物品
+    materials = Material.objects.filter(status='已丢失')
+    for material in materials:
+        material.delete()
+
+    materials = Material.objects.filter(status = '已报废')
+    for material in materials:
+        material.delete()
+
+    return JsonResponse({'result':'success'})
+
+
 # ------------------------------外联部门功能-------------------------------------------------------
 def applyBySellers(request):  # 发起一个申请
     data = json.loads(request.body)
@@ -441,7 +397,7 @@ def getAllApplications_goods_from_seller(request):  # 看到所有的租赁申�
             'message': app.message,  # 物资具体内容（十个篮球）
             'usage': app.usage,  # 物资用途
             'status': app.status,
-            'returnMessage': app.returnMessage,
+            'returnMessage': app.returnMessage if app.returnMessage != None else '',
             'createdTime': app.createdTime.strftime('%Y-%m-%d %H:%M'),
             'completedTime': app.finishTime.strftime('%Y-%m-%d %H:%M') if app.finishTime != None else ''
         }
@@ -473,6 +429,7 @@ def produceLeaseApply(request):  # 对于一个用户租赁申请，为其挑选
     app = LeaseApply.objects.get(id=applyId)
     message = data.get('message')
     app.setReturnMessage(message)
+    print(message)
 
     materialInfoList = data.get('categoryNum')  # 包含物资名字和数量
     for materialInfo in materialInfoList:
@@ -525,6 +482,7 @@ def refuseLeaseApply(request):  # 拒绝一个租赁申请
     data = json.loads(request.body)
     applyId = data.get('applicationId')
     message = data.get('message')
+    print("returnmessage" + message)
     apply = LeaseApply.objects.get(id=applyId)
     apply.setStatus('拒绝')
     apply.setReturnMessage(message)
@@ -546,7 +504,7 @@ def getMaterialsFromApplyId(request):  # 根据一个用户申请id，返回它�
     return JsonResponse({'result': 'success', 'returnGoods': materials})
 
 
-def setMaterialStatus_afterReturn(request):
+def setMaterialStatus_afterReturn(request): # 在归还后
     data = json.loads(request.body)
     applyId = data.get('applicationId')
     apply = LeaseApply.objects.get(id=applyId)
@@ -630,7 +588,7 @@ def getAllMaterials(request):
     materials = Material.objects.all()
     material_list = [
         {
-            'id': material.id,
+            'id': str(material.id),
             'category': str(material.category),  # 物资类别编号，外键关联到Category表
             'status': material.status,  # 物品状态
             'purchaseId': str(material.purchase_order.id)  # 订购订单，外键关联到PurchaseOrder表
@@ -780,8 +738,10 @@ def addApprovalRecord_purchase(request):  # 新增采购审批
 
 
 def getApprovalRecord_purchase(request):  # 查看所有的采购审批
+    # return JsonResponse({'result':'success'})
     print('purchase_approve')
     records = ApprovalRecord.objects.filter(operation_type='物资采购申请')
+    print("records:" + str(records))
     records_list = [
         {
             'id': record.id,
@@ -790,12 +750,14 @@ def getApprovalRecord_purchase(request):  # 查看所有的采购审批
             'created_time': record.created_time.strftime('%Y-%m-%d %H:%M'),
             'updated_time': record.updated_time.strftime('%Y-%m-%d %H:%M'),
             'applicant': record.applicant.to_dict(),
-            'description': record.description,
+            'description': record.description if record.description is not None else None,
             'approver': record.approver.to_dict() if record.approver is not None else None,
             'reply': record.reply
         }
         for record in records
     ]
+    # records_list.sort(
+    #     key = lambda record: (record['status'] != '待确认', record['created_time']))
     date_format = '%Y-%m-%d %H:%M'
     records_list.sort(
         key=lambda record: (record['status'] != '待确认', -int(datetime.strptime(record['created_time'], date_format).timestamp()))
@@ -869,7 +831,7 @@ def getAllPurchaseOrder(request):
     date_format = '%Y-%m-%d %H:%M'
     orders_list.sort(
         key=lambda order: (
-        order['status'] != '采购中', -int(datetime.strptime(record['created_time'], date_format).timestamp()))
+        order['status'] != '采购中', -int(datetime.strptime(order['created_time'], date_format).timestamp()))
     )
     print(orders_list)
     return JsonResponse({'result': 'success', 'orders': orders_list})

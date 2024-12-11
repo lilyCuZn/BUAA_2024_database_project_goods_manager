@@ -133,11 +133,14 @@ export default {
   },
   methods: {
     initActiveTab() {
+      console.log("initActiveTab");
       let department =
-        this.$store.state.user.department_name_id;
+        this.$store.state.user.department_name;
+
       if (department === "审批部门") {
         this.activeTab = "approve";
       } else if (department === "采购部门") {
+        console.log("purchase");
         this.activeTab = "purchase";
       } else if (department === "物资管理部门") {
         this.activeTab = "storage";

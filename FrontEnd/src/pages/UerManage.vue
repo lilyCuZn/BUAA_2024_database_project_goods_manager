@@ -29,7 +29,11 @@
           <!-- 过滤条件 -->
           <md-card-content>
             <div class="md-layout">
-              <div class="md-layout-item">
+              <div
+                class="md-layout-item md-size-10"
+                v-if="isDeleting || isResettingPassword"
+              ></div>
+              <div class="md-layout-item md-size-10">
                 <md-field>
                   <label>账户</label>
                   <md-input
@@ -38,7 +42,7 @@
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item">
+              <div class="md-layout-item md-size-10">
                 <md-field>
                   <label>姓名</label>
                   <md-input
@@ -48,7 +52,7 @@
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item">
+              <div class="md-layout-item md-size-15">
                 <md-field>
                   <label>身份</label>
                   <md-select
@@ -64,7 +68,7 @@
                   </md-select>
                 </md-field>
               </div>
-              <div class="md-layout-item">
+              <div class="md-layout-item md-size-15">
                 <md-field>
                   <label>部门</label>
                   <md-select
@@ -80,7 +84,7 @@
                   </md-select>
                 </md-field>
               </div>
-              <div class="md-layout-item">
+              <div class="md-layout-item md-size-20">
                 <md-field>
                   <label>邮箱</label>
                   <md-input
@@ -90,7 +94,7 @@
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item">
+              <div class="md-layout-item md-size-20">
                 <md-field>
                   <label>电话</label>
                   <md-input
@@ -116,101 +120,97 @@
             </div>
 
             <div v-if="!isLoading">
-              <md-table
+              <div
+                class="md-layout"
                 v-for="(item, index) in paginatedData"
                 :key="index"
-                table-header-color="green"
               >
-                <md-table-row>
-                  <md-table-cell
-                    md-label="选择"
-                    v-if="isDeleting || isResettingPassword"
-                  >
-                    <md-checkbox
-                      v-model="selectedUsers"
-                      :disabled="item.identity === '管理员'"
-                      :value="item.id"
-                    ></md-checkbox>
-                  </md-table-cell>
-                  <md-table-cell :md-label="idHeader">
-                    <md-field>
-                      <md-input
-                        v-model="item.id"
-                        type="text"
-                        disabled
-                      ></md-input>
-                    </md-field>
-                  </md-table-cell>
-                  <md-table-cell :md-label="nameHeader">
-                    <md-field>
-                      <md-input
-                        v-model="item.name"
-                        type="text"
-                        :disabled="disabledItem(item)"
-                        @input="markedAsModified(item)"
-                      ></md-input>
-                    </md-field>
-                  </md-table-cell>
-                  <md-table-cell :md-label="identityHeader">
-                    <md-field>
-                      <md-select
-                        v-model="item.identity"
-                        :disabled="disabledItem(item)"
-                        @input="
-                          markedAsModified(item, $event)
-                        "
+                <div
+                  class="md-layout-item md-size-10"
+                  v-if="isDeleting || isResettingPassword"
+                >
+                  <md-checkbox
+                    v-model="selectedUsers"
+                    :disabled="item.identity === '管理员'"
+                    :value="item.id"
+                  ></md-checkbox>
+                </div>
+                <div class="md-layout-item md-size-10">
+                  <md-field>
+                    <md-input
+                      v-model="item.id"
+                      type="text"
+                      disabled
+                    ></md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-10">
+                  <md-field>
+                    <md-input
+                      v-model="item.name"
+                      type="text"
+                      :disabled="disabledItem(item)"
+                      @input="markedAsModified(item)"
+                    ></md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-15">
+                  <md-field>
+                    <md-select
+                      v-model="item.identity"
+                      :disabled="disabledItem(item)"
+                      @input="
+                        markedAsModified(item, $event)
+                      "
+                    >
+                      <md-option
+                        v-for="option in identityOptions"
+                        :key="option"
+                        :value="option"
+                        >{{ option }}</md-option
                       >
-                        <md-option
-                          v-for="option in identityOptions"
-                          :key="option"
-                          :value="option"
-                          >{{ option }}</md-option
-                        >
-                      </md-select>
-                    </md-field>
-                  </md-table-cell>
-                  <md-table-cell
-                    :md-label="department_name_idHeader"
-                  >
-                    <md-field>
-                      <md-select
-                        v-model="item.department_name_id"
-                        :disabled="disabledItem(item)"
-                        @input="
-                          markedAsModified(item, $event)
-                        "
+                    </md-select>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-15">
+                  <md-field>
+                    <md-select
+                      v-model="item.department_name_id"
+                      :disabled="disabledItem(item)"
+                      @input="
+                        markedAsModified(item, $event)
+                      "
+                    >
+                      <md-option
+                        v-for="option in department_name_idOptions"
+                        :key="option"
+                        :value="option"
+                        >{{ option }}</md-option
                       >
-                        <md-option
-                          v-for="option in department_name_idOptions"
-                          :key="option"
-                          :value="option"
-                          >{{ option }}</md-option
-                        >
-                      </md-select>
-                    </md-field>
-                  </md-table-cell>
-                  <md-table-cell :md-label="emailHeader">
-                    <md-field>
-                      <md-input
-                        v-model="item.email"
-                        type="email"
-                        :disabled="disabledItem(item)"
-                        @input="markedAsModified(item)"
-                      ></md-input>
-                    </md-field>
-                  </md-table-cell>
-                  <md-table-cell :md-label="phoneHeader">
-                    <md-field>
-                      <md-input
-                        v-model="item.phone"
-                        type="phone"
-                        :disabled="disabledItem(item)"
-                        @input="markedAsModified(item)"
-                      ></md-input>
-                    </md-field>
-                  </md-table-cell>
-                </md-table-row>
-              </md-table>
+                    </md-select>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-20">
+                  <md-field>
+                    <md-input
+                      v-model="item.email"
+                      type="email"
+                      :disabled="disabledItem(item)"
+                      @input="markedAsModified(item)"
+                    ></md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-20">
+                  <md-field>
+                    <md-input
+                      v-model="item.phone"
+                      type="phone"
+                      :disabled="disabledItem(item)"
+                      @input="markedAsModified(item)"
+                    ></md-input>
+                  </md-field>
+                </div>
+              </div>
             </div>
           </md-card-content>
           <!-- 添加、删除、编辑、导出、重置密码按钮 -->

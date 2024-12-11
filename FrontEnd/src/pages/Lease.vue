@@ -26,9 +26,7 @@
           <!-- 过滤条件 -->
           <md-card-content>
             <div class="md-layout">
-              <div
-                class="md-layout-item md-small-size-100 md-size-5"
-              >
+              <div class="md-layout-item md-size-5">
                 <md-field>
                   <label>{{ idHeader }}</label>
                   <md-input
@@ -37,26 +35,8 @@
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item md-small-size-100">
-                <md-field>
-                  <label>{{ applicantHeader }}</label>
-                  <md-input
-                    v-model="filters.applicant"
-                    @input="updateFilteredLeaseApplies"
-                  ></md-input>
-                </md-field>
-              </div>
-              <div class="md-layout-item md-small-size-100">
-                <md-field>
-                  <label>{{ phoneHeader }}</label>
-                  <md-input
-                    v-model="filters.phone"
-                    type="phone"
-                    @input="updateFilteredLeaseApplies"
-                  ></md-input>
-                </md-field>
-              </div>
-              <div class="md-layout-item md-small-size-100">
+
+              <div class="md-layout-item md-size-40">
                 <md-field>
                   <label>{{ goodsInfoHeader }}</label>
                   <md-input
@@ -66,7 +46,7 @@
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item md-small-size-100">
+              <div class="md-layout-item md-size-40">
                 <md-field>
                   <label>{{ goodsUsageHeader }}</label>
                   <md-input
@@ -76,7 +56,7 @@
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item md-small-size-100">
+              <div class="md-layout-item md-size-10">
                 <md-field>
                   <label>{{ stateHeader }}</label>
                   <md-select
@@ -92,57 +72,70 @@
                   </md-select>
                 </md-field>
               </div>
+              <div class="md-layout-item md-size-5"></div>
             </div>
-          </md-card-content>
-          <!-- 申请记录 -->
-          <div style="text-align: center" v-if="isLoading">
-            <md-progress-spinner
-              :md-diameter="100"
-              :md-stroke="10"
-              md-mode="indeterminate"
-            ></md-progress-spinner>
-          </div>
-          <div v-if="!isLoading">
-            <md-table
-              style="padding-left: 10px"
-              table-header-color="green"
-              v-for="(item, index) in paginatedData"
-              :key="index"
+            <div
+              style="text-align: center"
+              v-if="isLoading"
             >
-              <md-table-row>
-                <md-table-cell :md-label="idHeader">{{
-                  item.id
-                }}</md-table-cell>
-                <md-table-cell
-                  :md-label="applicantHeader"
-                  >{{ item.applicant }}</md-table-cell
-                >
-                <md-table-cell :md-label="phoneHeader">{{
-                  item.phone
-                }}</md-table-cell>
-                <md-table-cell
-                  :md-label="goodsInfoHeader"
-                  >{{ item.goodsInfo }}</md-table-cell
-                >
-                <md-table-cell
-                  :md-label="goodsUsageHeader"
-                  >{{ item.goodsUsage }}</md-table-cell
-                >
-                <md-table-cell :md-label="stateHeader">{{
-                  item.state
-                }}</md-table-cell>
-
+              <md-progress-spinner
+                :md-diameter="100"
+                :md-stroke="10"
+                md-mode="indeterminate"
+              ></md-progress-spinner>
+            </div>
+            <div v-if="!isLoading">
+              <div
+                class="md-layout"
+                style="padding-left: 10px"
+                table-header-color="green"
+                v-for="(item, index) in paginatedData"
+                :key="index"
+              >
                 <div
-                  :style="{
-                    textAlign: 'right',
-                    display:
-                      item.state === '租赁中'
-                        ? 'block'
-                        : 'none',
-                  }"
+                  class="md-layout-item md-size-5"
+                  style="padding-left: 10px"
                 >
+                  <md-field>
+                    <md-input
+                      v-model="item.id"
+                      disabled
+                    ></md-input>
+                  </md-field>
+                </div>
+
+                <div class="md-layout-item md-size-40">
+                  <md-field>
+                    <md-input
+                      v-model="item.goodsInfo"
+                      disabled
+                    ></md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-40">
+                  <md-field>
+                    <md-input
+                      v-model="item.goodsUsage"
+                      disabled
+                    ></md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-10">
+                  <md-field>
+                    <md-input v-model="item.state" disabled>
+                    </md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-5">
                   <md-button
-                    class="md-just-button md-success"
+                    class="md-just-icon md-success"
+                    :style="{
+                      textAlign: 'right',
+                      display:
+                        item.state === '租赁中'
+                          ? 'block'
+                          : 'none',
+                    }"
                     @click="setReturn(item)"
                   >
                     <md-icon>done_outline</md-icon
@@ -151,9 +144,9 @@
                     ></md-button
                   >
                 </div>
-              </md-table-row>
-            </md-table>
-          </div>
+              </div>
+            </div>
+          </md-card-content>
           <div
             style="
               display: flex;
@@ -244,31 +237,7 @@
               </md-card-header>
               <md-card-content>
                 <div
-                  class="md-layout-item md-small-size-100 md-size-100"
-                >
-                  <md-field>
-                    <label>{{ applicantHeader }}</label>
-                    <md-input
-                      v-model="addingLeaseApply.applicant"
-                      disabled
-                    ></md-input>
-                  </md-field>
-                </div>
-                <div
-                  class="md-layout-item md-small-size-100 md-size-100"
-                ></div>
-                <div
-                  class="md-layout-item md-small-size-100 md-size-100"
-                >
-                  <md-field>
-                    <label>{{ phoneHeader }}</label>
-                    <md-input
-                      v-model="addingLeaseApply.phone"
-                    ></md-input>
-                  </md-field>
-                </div>
-                <div
-                  class="md-layout-item md-small-size-100 md-size-100"
+                  class="md-layout-item md-size-100 md-size-100"
                 >
                   <md-field>
                     <label>{{ goodsInfoHeader }}</label>
@@ -278,31 +247,13 @@
                   </md-field>
                 </div>
                 <div
-                  class="md-layout-item md-small-size-100 md-size-100"
+                  class="md-layout-item md-size-100 md-size-100"
                 >
                   <md-field>
                     <label>{{ goodsUsageHeader }}</label>
                     <md-textarea
                       v-model="addingLeaseApply.goodsUsage"
                     ></md-textarea>
-                  </md-field>
-                </div>
-                <div
-                  class="md-layout-item md-small-size-100 md-size-100"
-                >
-                  <md-field>
-                    <label>{{ stateHeader }}</label>
-                    <md-select
-                      v-model="addingLeaseApply.state"
-                      disabled
-                    >
-                      <md-option
-                        v-for="option in stateOptions"
-                        :key="option"
-                        :value="option"
-                        >{{ option }}</md-option
-                      >
-                    </md-select>
                   </md-field>
                 </div>
               </md-card-content>
@@ -489,13 +440,13 @@ export default {
       await this.addLeaseApply(this.addingLeaseApply);
       this.isAdding = false;
       this.addingLeaseApply = this.defaultLeaseApply();
+      this.$notifyVue("新增租赁申请成功", "success");
     },
     exportFilteredLeaseApplies() {
       const modifiedData = this.filteredLeaseApplies.map(
         (item) => {
           return {
             申请人: item.applicant,
-            申请类型: item.type,
             手机: item.phone,
             物资信息: item.goodsInfo,
             物资用途: item.goodsUsage,
@@ -505,6 +456,7 @@ export default {
       );
 
       this.$ExportFile(modifiedData, "租赁申请记录.xlsx");
+      this.$notifyVue("导出租赁申请成功", "success");
     },
   },
 };

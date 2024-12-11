@@ -680,6 +680,7 @@ export default {
     updateFilteredUsers() {
       console.log("updateFilteredUsers");
       console.log("this.filters:", this.filters);
+      this.currentPage = 1;
       this.filteredUsers = this.users.filter((user) => {
         return (
           (this.filters.id

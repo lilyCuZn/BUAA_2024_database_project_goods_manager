@@ -217,6 +217,7 @@ export default {
     updateFilteredGoods() {
       console.log("updateFilteredGoods");
       console.log("this.filters:", this.filters);
+      this.currentPage = 1;
       this.filteredGoods = this.goods.filter((item) => {
         return (
           (this.filters.id === "" ||
@@ -267,10 +268,7 @@ export default {
           };
         }
       );
-      this.$ExportFile(
-        modifiedData,
-        "物资表.xlsx"
-      );
+      this.$ExportFile(modifiedData, "物资表.xlsx");
       this.$notifyVue("导出成功");
     },
   },

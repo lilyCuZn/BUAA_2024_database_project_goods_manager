@@ -414,10 +414,18 @@ def getAppliesBySeller(request):  # 获取某个销售人员所写的申请
             'goodsInfo': app.message,
             'goodsUsage': app.usage,
             'state': app.status,
+            'createdTime':app.createdTime.strftime('%Y-%m-%d %H:%M'),
+            'returnMessage':app.returnMessage,
+            'message':app.message
             # 添加其他需要返回的字段...
         }
         for app in applications
     ]
+    date_format = '%Y-%m-%d %H:%M'
+    application_list.sort(
+        key=lambda app: (
+        app['state'] != '待确认', -int(datetime.strptime(app['createdTime'], date_format).timestamp()))
+    )
     print(application_list)
     return JsonResponse({'result': 'success', 'applications': application_list})
 
@@ -439,7 +447,9 @@ def getAllApplications_goods_from_seller(request):  # 看到所有的租赁申�
         }
         for app in applications
     ]
-    applications_list.sort(key=lambda app: (app['status'] != '待确认', app['status'] != '归还中'))
+    date_format = '%Y-%m-%d %H:%M'
+    applications_list.sort(key=lambda app: (app['status'] != '待确认', app['status'] != '归还中',
+                                            -int(datetime.strptime(app['createdTime'], date_format).timestamp())))
     print(applications_list)
     return JsonResponse({
         'result': 'success',
@@ -461,6 +471,8 @@ def produceLeaseApply(request):  # 对于一个用户租赁申请，为其挑选
     data = json.loads(request.body)
     applyId = data.get('applicationId')
     app = LeaseApply.objects.get(id=applyId)
+    message = data.get('message')
+    app.setReturnMessage(message)
 
     materialInfoList = data.get('categoryNum')  # 包含物资名字和数量
     for materialInfo in materialInfoList:
@@ -472,7 +484,7 @@ def produceLeaseApply(request):  # 对于一个用户租赁申请，为其挑选
         flag = True
         if materials.count() < num:
             flag = False
-            # TODO: 可能涉及添加库存警告
+
             stockWarning = StockWarning(
                 item=category,
             )
@@ -512,8 +524,11 @@ def produceLeaseApply(request):  # 对于一个用户租赁申请，为其挑选
 def refuseLeaseApply(request):  # 拒绝一个租赁申请
     data = json.loads(request.body)
     applyId = data.get('applicationId')
+    message = data.get('message')
     apply = LeaseApply.objects.get(id=applyId)
     apply.setStatus('拒绝')
+    apply.setReturnMessage(message)
+    apply.setFinish()
     return JsonResponse({'result': 'success'})
 
 
@@ -582,8 +597,10 @@ def getApprovalRecord_maintain(request):  # 得到物资管理部门的所有审
         }
         for record in records
     ]
+    date_format = '%Y-%m-%d %H:%M'
     records_list.sort(
-        key=lambda record: (record['status'] != '待确认', record['created_time'])
+        key=lambda record: (
+        record['status'] != '待确认', -int(datetime.strptime(record['created_time'], date_format).timestamp()))
     )
     applications = records_list
     print(applications)
@@ -682,7 +699,11 @@ def getMaintainRecords_all(request):  # 得到所有的维护记录
         for record in maintainRecords
     ]
     print(record_list)
-    record_list.sort(key=lambda record: (record['status'] != '未完成', record['createdTime']))
+    date_format = '%Y-%m-%d %H:%M'
+    record_list.sort(
+        key=lambda record: (
+        record['status'] != '未完成', -int(datetime.strptime(record['createdTime'], date_format).timestamp()))
+    )
     print(record_list)
     print('success')
     return JsonResponse({'result': 'success', 'record_list': record_list})
@@ -775,8 +796,9 @@ def getApprovalRecord_purchase(request):  # 查看所有的采购审批
         }
         for record in records
     ]
+    date_format = '%Y-%m-%d %H:%M'
     records_list.sort(
-        key=lambda record: (record['status'] != '待确认', record['created_time'])
+        key=lambda record: (record['status'] != '待确认', -int(datetime.strptime(record['created_time'], date_format).timestamp()))
     )
     applications = records_list
     print(applications)
@@ -829,10 +851,6 @@ def addPurchaseOrder(request):  # 发起采购订单
 def getAllPurchaseOrder(request):
     # 获取所有的采购订单，优先放采购中的，status相同按照时间先后排序
     orders = PurchaseOrder.objects.all()
-    sorted_orders = sorted(
-        orders,
-        key=lambda order: (order.status != '采购中', order.create_time)
-    )
     orders_list = [
         {
             'id': order.id,  # 主键，自增
@@ -846,8 +864,13 @@ def getAllPurchaseOrder(request):
             'status': order.status,  # 订单状态
             'approver': str(order.approval) if order.approval != None else None  # 审批记录编号，外键关联到ApprovalRecord表
         }
-        for order in sorted_orders
+        for order in orders
     ]
+    date_format = '%Y-%m-%d %H:%M'
+    orders_list.sort(
+        key=lambda order: (
+        order['status'] != '采购中', -int(datetime.strptime(record['created_time'], date_format).timestamp()))
+    )
     print(orders_list)
     return JsonResponse({'result': 'success', 'orders': orders_list})
 
@@ -888,7 +911,11 @@ def getApprovalRecords_Status_approve(request):  # 得到所有某种status的�
         }
         for record in records
     ]
-    records_list.sort(key=lambda record: record['created_time'])
+    date_format = '%Y-%m-%d %H:%M'
+    records_list.sort(
+        key=lambda record: (
+        record['status'] != '待确认', -int(datetime.strptime(record['created_time'], date_format).timestamp()))
+    )
     print(records_list)
     print("success")
     return JsonResponse({'result': 'success', 'applications': records_list})

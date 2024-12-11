@@ -70,23 +70,25 @@ export default {
   computed: {
     paginatedData() {
       return this.searched.slice(
-        (this.currentPage - 1) * 10,
-        this.currentPage * 10
+        (this.currentPage - 1) * this.itemsPerPage,
+        this.currentPage * this.itemsPerPage
+      );
+    },
+    totalPages() {
+      return Math.ceil(
+        this.searched.length / this.itemsPerPage
       );
     },
   },
   data() {
     return {
+      itemsPerPage: 5,
       currentPage: 1,
-      totalPages: 1,
       searched: [],
       categoryNum: [],
     };
   },
   methods: {
-    test() {
-      console.log("test");
-    },
     async getLeaseGoodsCategory() {
       console.log("getLeaseGoodsCategory");
       let req = {
@@ -127,7 +129,9 @@ export default {
       }
     },
     changePage(page) {
-      this.currentPage = page;
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page;
+      }
     },
   },
 };

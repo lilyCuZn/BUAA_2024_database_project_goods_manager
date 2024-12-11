@@ -21,6 +21,10 @@
             "
           >
             <div style="letter-spacing: 2px">
+              维护记录编号：<span class="text-info">{{
+                item.id
+              }}</span
+              >，
               <span class="text-success">{{
                 item.createdTime
               }}</span>
@@ -34,6 +38,16 @@
               <span class="text-danger">{{
                 item.status
               }}</span>
+              <span
+                v-if="
+                  item.status === '已完成' ||
+                  item.status === '拒绝'
+                "
+                >，完结时间为&nbsp;<span
+                  class="text-success"
+                  >{{ item.completedTime }}</span
+                ></span
+              >
             </div>
           </md-table-cell>
           <div style="text-align: right">
@@ -57,52 +71,11 @@
           </div>
         </md-table-row>
         <div class="md-layout" v-if="focusedItem === item">
-          <div class="md-layout-item">
-            <md-field>
-              <label>编号</label>
-              <md-input
-                v-model="item.id"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
+          <div class="md-layout-item md-size-100">
             <md-field>
               <label>申请记录编号</label>
               <md-input
                 v-model="item.applicationId"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-50"
-          >
-            <md-field>
-              <label>创建时间</label>
-              <md-input
-                v-model="item.createdTime"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>完成时间</label>
-              <md-input
-                v-model="item.completedTime"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>状态</label>
-              <md-input
-                v-model="item.status"
-                type="text"
                 disabled
               ></md-input>
             </md-field>
@@ -144,7 +117,10 @@
                 <md-table-cell md-label="物资状态">{{
                   item.status
                 }}</md-table-cell>
-                <md-table-cell md-label="维护">
+                <md-table-cell
+                  md-label="维护"
+                  v-if="item.status === '维护中'"
+                >
                   <md-button
                     class="md-just-icon md-success"
                     @click="repairGoods(item.id)"
@@ -235,13 +211,6 @@
       <div>
         <md-button
           class="md-just-icon md-success"
-          @click="exportData"
-        >
-          <md-icon>download</md-icon>
-          <md-tooltip md-direction="top">导出</md-tooltip>
-        </md-button>
-        <md-button
-          class="md-just-icon md-success"
           @click="changePage(currentPage - 1)"
           :disabled="currentPage <= 1"
         >
@@ -255,6 +224,13 @@
         >
           <md-icon>east</md-icon>
           <md-tooltip md-direction="top">下一页</md-tooltip>
+        </md-button>
+        <md-button
+          class="md-just-icon md-success"
+          @click="exportData"
+        >
+          <md-icon>download</md-icon>
+          <md-tooltip md-direction="top">导出</md-tooltip>
         </md-button>
       </div>
       <div>
@@ -424,20 +400,20 @@ export default {
     },
     exportData() {
       console.log("exportData");
-      const modifiedData = this.filteredUsers.map(
+      const modifiedData = this.maintainRecords.map(
         (item) => {
           return {
-            申请记录编号: item.approveId,
-            供应商: item.provider,
-            物资类别: item.goods_type,
-            物资数量: item.goods_num,
+            维护记录编号: item.id,
+            申请记录编号: item.applicationId,
+            申请人: item.applicant.name,
             创建时间: item.createdTime,
-            完成时间: item.completedTime,
-            记录状态: item.status,
+            状态: item.status,
+            完结时间: item.completedTime,
           };
         }
       );
-      this.$ExportFile(modifiedData, "采购记录表.txt");
+      this.$ExportFile(modifiedData, "维护记录.xlsx");
+      this.$notifyVue("导出成功!");
     },
   },
 };

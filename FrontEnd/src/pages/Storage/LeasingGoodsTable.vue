@@ -3,7 +3,7 @@
     <md-table v-model="paginatedData" md-card>
       <md-table-toolbar>
         <div class="md-toolbar-section-start">
-          <h1 class="md-title">归还物资</h1>
+          <h1 class="md-title">租赁中的物资</h1>
         </div>
       </md-table-toolbar>
       <md-table-toolbar>
@@ -25,29 +25,6 @@
         }}</md-table-cell>
         <md-table-cell md-label="物资状态">
           {{ item.status }}
-        </md-table-cell>
-        <md-table-cell
-          md-label="检查"
-          v-if="item.status === '租赁中'"
-        >
-          <md-button
-            class="md-success"
-            @click="setGoodsStatus(item, '完好')"
-          >
-            完好
-          </md-button>
-          <md-button
-            class="md-warning"
-            @click="setGoodsStatus(item, '损坏')"
-          >
-            损坏
-          </md-button>
-          <md-button
-            class="md-danger"
-            @click="setGoodsStatus(item, '丢失')"
-          >
-            丢失
-          </md-button>
         </md-table-cell>
       </md-table-row>
     </md-table>
@@ -87,8 +64,6 @@
   </div>
 </template>
 <script>
-import { set } from "lodash";
-
 export default {
   props: {
     applicationId: {
@@ -117,28 +92,6 @@ export default {
     };
   },
   methods: {
-    async canReturn() {
-      console.log("canReturn");
-      for (const item of this.returnGoods) {
-        if (item.status === "租赁中") {
-          await this.setGoodsStatus(item, "完好");
-        }
-      }
-    },
-    async setGoodsStatus(item, status) {
-      console.log("setGoodsStatus");
-      let req = {
-        action: "setGoodsStatus",
-        goodsId: item.id,
-        status: status,
-        applicationId: this.applicationId,
-      };
-      let res = await this.$Backend(req);
-      if (res && res.result) {
-        console.log("setGoodsStatus success");
-        item.status = status;
-      }
-    },
     async getReturnGoods() {
       console.log("getReturnGoods");
       let req = {

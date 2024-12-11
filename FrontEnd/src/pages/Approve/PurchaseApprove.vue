@@ -21,21 +21,31 @@
             "
           >
             <div style="letter-spacing: 2px">
+              申请编号：<span class="text-info">{{
+                item.id
+              }}</span
+              >,
               <span class="text-success">{{
                 item.created_time
               }}</span>
-              来自
+              由
               <span class="text-info">{{
                 item.applicant.name
               }}</span>
-              的
+              发起的
               <span class="text-danger">{{
                 item.operation_type
               }}</span>
-              请求。状态为
+              请求，状态为
               <span class="text-danger">{{
                 item.status
-              }}</span>
+              }}</span
+              ><span v-if="item.status !== '待确认'"
+                >，更新时间为&nbsp;<span
+                  class="text-success"
+                  >{{ item.updated_time }}</span
+                ></span
+              >
             </div>
           </md-table-cell>
           <div style="text-align: right">
@@ -60,65 +70,7 @@
         </md-table-row>
         <div class="md-layout" v-if="focusedItem === item">
           <div
-            class="md-layout-item md-small-size-100 md-size-33"
-          >
-            <md-field>
-              <label>申请编号</label>
-              <md-input
-                v-model="item.id"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-33"
-          >
-            <md-field>
-              <label>申请人</label>
-              <md-input
-                v-model="item.applicant.name"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-33"
-          >
-            <md-field>
-              <label>部门</label>
-              <md-input
-                v-model="item.applicant.department_name"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-33"
-          >
-            <md-field>
-              <label>申请类型</label>
-              <md-input
-                v-model="item.operation_type"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-33"
-          >
-            <md-field>
-              <label>申请时间</label>
-              <md-input
-                v-model="item.created_time"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-33"
+            class="md-layout-item md-small-size-100 md-size-100"
           >
             <md-field>
               <label>申请状态</label>
@@ -132,18 +84,7 @@
               </md-select>
             </md-field>
           </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-50"
-          >
-            <md-field>
-              <label>更新时间</label>
-              <md-textarea
-                v-model="item.updated_time"
-                type="textarea"
-                disabled
-              ></md-textarea>
-            </md-field>
-          </div>
+
           <div
             class="md-layout-item md-small-size-100 md-size-50"
           >

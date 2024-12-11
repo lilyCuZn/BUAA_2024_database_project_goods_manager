@@ -2,8 +2,7 @@
   <div>
     <!-- 过滤条件 -->
     <div class="md-layout">
-      <md-icon>search</md-icon>
-      <div class="md-layout-item md-size-15">
+      <div class="md-layout-item md-size-25">
         <md-field>
           <label>{{ idHeader }}</label>
           <md-input
@@ -12,7 +11,7 @@
           ></md-input>
         </md-field>
       </div>
-      <div class="md-layout-item md-size-15">
+      <div class="md-layout-item md-size-25">
         <md-field>
           <label>{{ purchaseIdHeader }}</label>
           <md-input
@@ -22,7 +21,7 @@
           ></md-input>
         </md-field>
       </div>
-      <div class="md-layout-item">
+      <div class="md-layout-item md-size-25">
         <md-field>
           <label>{{ categoryHeader }}</label>
           <md-select
@@ -38,7 +37,7 @@
           </md-select>
         </md-field>
       </div>
-      <div class="md-layout-item">
+      <div class="md-layout-item md-size-25">
         <md-field>
           <label>{{ statusHeader }}</label>
           <md-select
@@ -166,7 +165,7 @@ export default {
         "租赁中",
         "维护中",
         "库中",
-        "全部",
+        "全部状态",
         "已报废",
         "已丢失",
       ],
@@ -207,6 +206,7 @@ export default {
         this.filter_categoryOptions = res.categoryList.map(
           (item) => item.name
         );
+        this.filter_categoryOptions.push("全部类别");
       }
     },
     changePage(page) {
@@ -269,8 +269,9 @@ export default {
       );
       this.$ExportFile(
         modifiedData,
-        "未确认的审批记录.xlsx"
+        "物资表.xlsx"
       );
+      this.$notifyVue("导出成功");
     },
   },
 };

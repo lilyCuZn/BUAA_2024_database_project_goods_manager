@@ -10,7 +10,7 @@
     </div>
     <div v-if="!isLoading">
       <md-table
-        v-for="(item, index) in leaseApplications"
+        v-for="(item, index) in paginatedData"
         :key="index"
       >
         <md-table-row>
@@ -22,6 +22,10 @@
             "
           >
             <div style="letter-spacing: 2px">
+              申请编号：<span class="text-info">{{
+                item.id
+              }}</span
+              >，
               <span class="text-success">{{
                 item.createdTime
               }}</span>
@@ -34,7 +38,17 @@
               申请，状态为
               <span class="text-danger">{{
                 item.status
-              }}</span>
+              }}</span
+              ><span
+                v-if="
+                  item.status === '已结束' ||
+                  item.status === '拒绝'
+                "
+                >，完结时间为&nbsp;<span
+                  class="text-success"
+                  >{{ item.completedTime }}</span
+                ></span
+              >
             </div>
           </md-table-cell>
           <div style="text-align: right">
@@ -58,80 +72,34 @@
           </div>
         </md-table-row>
         <div class="md-layout" v-if="focusedItem === item">
-          <div class="md-layout-item">
-            <md-field>
-              <label>编号</label>
-              <md-input
-                v-model="item.id"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>发起人</label>
-              <md-input
-                v-model="item.applicant.name"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div
-            class="md-layout-item md-small-size-100 md-size-50"
-          >
-            <md-field>
-              <label>创建时间</label>
-              <md-input
-                v-model="item.createdTime"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
+          <div class="md-layout-item md-size-33">
             <md-field>
               <label>物资信息</label>
-              <md-input
+              <md-textarea
                 v-model="item.message"
                 disabled
-              ></md-input>
+              ></md-textarea>
             </md-field>
           </div>
-          <div class="md-layout-item">
+          <div class="md-layout-item md-size-33">
             <md-field>
               <label>物资用途</label>
-              <md-input
+              <md-textarea
                 v-model="item.usage"
                 disabled
-              ></md-input>
+              ></md-textarea>
             </md-field>
           </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>结束时间</label>
-              <md-input
-                v-model="item.completedTime"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
-            <md-field>
-              <label>状态</label>
-              <md-input
-                v-model="item.status"
-                type="text"
-                disabled
-              ></md-input>
-            </md-field>
-          </div>
-          <div class="md-layout-item">
+          <div class="md-layout-item md-size-33">
             <md-field>
               <label>批示信息</label>
-              <md-input
+              <md-textarea
                 v-model="item.returnMessage"
-              ></md-input>
+                :disabled="
+                  item.status !== '待确认' &&
+                  item.status !== '归还中'
+                "
+              ></md-textarea>
             </md-field>
           </div>
           <!-- 借出物资 -->
@@ -141,19 +109,29 @@
           >
             <LeaseGoods ref="LeaseGoods" />
             <md-button
-              class="md-just-icon"
+              class="md-just-icon md-success"
               @click="confirmLease(item)"
             >
               <md-icon>check</md-icon>
               <md-tooltip>确认借出</md-tooltip></md-button
             >
             <md-button
-              class="md-just-icon"
+              class="md-just-icon md-danger"
               @click="refuseLease(item)"
             >
               <md-icon>close</md-icon>
               <md-tooltip>拒绝借出</md-tooltip></md-button
             >
+          </div>
+          <!-- 租赁中物资 -->
+          <div
+            class="md-layout-item md-size-100"
+            v-if="item.status === '租赁中'"
+          >
+            <LeasingGoodsTable
+              ref="LeasingGoodsTable"
+              :applicationId="item.id"
+            />
           </div>
           <!-- 归还物资 -->
           <div
@@ -167,14 +145,16 @@
               ref="ReturnGoods"
               :applicationId="item.id"
             />
-            <md-button
-              v-if="canReturn"
-              class="md-just-icon"
-              @click="checkReturn(item)"
-            >
-              <md-icon>check</md-icon>
-              <md-tooltip>检查完毕</md-tooltip></md-button
-            >
+            <div>
+              <md-button
+                v-if="item.status === '归还中'"
+                class="md-just-icon md-success"
+                @click="checkReturn(item)"
+              >
+                <md-icon>check</md-icon>
+                <md-tooltip>检查完毕</md-tooltip></md-button
+              >
+            </div>
           </div>
         </div>
       </md-table>
@@ -187,13 +167,6 @@
       "
     >
       <div>
-        <md-button
-          class="md-just-icon md-success"
-          @click="exportData"
-        >
-          <md-icon>download</md-icon>
-          <md-tooltip md-direction="top">导出</md-tooltip>
-        </md-button>
         <md-button
           class="md-just-icon md-success"
           @click="changePage(currentPage - 1)"
@@ -210,6 +183,13 @@
           <md-icon>east</md-icon>
           <md-tooltip md-direction="top">下一页</md-tooltip>
         </md-button>
+        <md-button
+          class="md-just-icon md-success"
+          @click="exportData"
+        >
+          <md-icon>download</md-icon>
+          <md-tooltip md-direction="top">导出</md-tooltip>
+        </md-button>
       </div>
       <div>
         <span>
@@ -225,11 +205,13 @@
 </template>
 <script>
 import LeaseGoods from "./LeaseGoods.vue";
+import LeasingGoodsTable from "./LeasingGoodsTable.vue";
 import ReturnGoods from "./ReturnGoods.vue";
 export default {
   components: {
     LeaseGoods,
     ReturnGoods,
+    LeasingGoodsTable,
   },
   async mounted() {
     console.log("mounted");
@@ -245,22 +227,6 @@ export default {
     totalPages() {
       return Math.ceil(
         this.leaseApplications.length / this.itemsPerPage
-      );
-    },
-    paginatedLeaseGoods() {
-      console.log("paginatedLeaseGoods");
-      const start =
-        (this.currentLeaseGoodsPage - 1) *
-        this.leaseLeaseGoodsPerPage;
-      const end =
-        this.currentLeaseGoodsPage *
-        this.leaseLeaseGoodsPerPage;
-      return this.leaseGoodsSearched.slice(start, end);
-    },
-    totalLeaseGoodsPages() {
-      return Math.ceil(
-        this.leaseGoodsSearched.length /
-          this.leaseLeaseGoodsPerPage
       );
     },
     canCompleted() {
@@ -280,24 +246,9 @@ export default {
       itemsPerPage: 10,
 
       isLoading: false,
-
-      currentLeaseGoodsPage: 1,
-      leaseLeaseGoodsPerPage: 5,
-
-      leaseLeaseGoods: [],
-      leaseGoodsSearched: [],
-
-      goodsCategory: [],
     };
   },
   methods: {
-    canReturn(item) {
-      console.log("item.status", item.status);
-      return (
-        this.$refs.ReturnGoods[0].canReturn() &&
-        item.status != "已结束"
-      );
-    },
     async refuseLease(item) {
       console.log("refuseLease", item);
       let req = {
@@ -314,6 +265,7 @@ export default {
 
     async checkReturn(item) {
       console.log("checkReturn", item);
+      await this.$refs.ReturnGoods[0].canReturn();
       let req = {
         action: "checkReturn",
         applicationId: item.id,
@@ -328,8 +280,7 @@ export default {
       console.log("confirmLease", item);
       console.log(
         "this.$refs.LeaseGoods",
-        this.$refs.LeaseGoods[0],
-        typeof this.$refs.LeaseGoods[0].leaseGoods
+        this.$refs.LeaseGoods[0]
       );
       let res = await this.$refs.LeaseGoods[0].leaseGoods(
         item
@@ -365,16 +316,13 @@ export default {
       this.focusedItem =
         this.focusedItem === item ? null : item;
       this.isEditing = false;
-      if (this.focusedItem) {
-        // await this.$refs.LeaseGoods.getLeaseGoodsCategory();
-      }
     },
     exportData() {
       console.log("exportData");
-      const modifiedData = this.filteredUsers.map(
+      const modifiedData = this.leaseApplications.map(
         (item) => {
           return {
-            租赁申请编号: item.approveId,
+            租赁申请编号: item.id,
             申请人编号: item.applicant.id,
             申请人姓名: item.applicant.name,
             创建时间: item.createdTime,
@@ -383,7 +331,8 @@ export default {
           };
         }
       );
-      this.$ExportFile(modifiedData, "采购记录表.txt");
+      this.$ExportFile(modifiedData, "租赁申请表.xlsx");
+      this.$notifyVue("导出成功");
     },
   },
 };

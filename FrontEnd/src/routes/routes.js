@@ -52,7 +52,7 @@ const routes = [
         component: TableList,
       },
       {
-        path: "/userManage",
+        path: "userManage",
         name: "用户管理",
         component: UerManage,
       },

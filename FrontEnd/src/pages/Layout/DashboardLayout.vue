@@ -72,6 +72,10 @@
         <md-icon>warehouse</md-icon>
         <p>物资管理部门</p>
       </sidebar-link>
+      <sidebar-link to="/notifications">
+        <md-icon>notifications</md-icon>
+        <p>使用说明</p>
+      </sidebar-link>
     </side-bar>
 
     <div class="main-panel">

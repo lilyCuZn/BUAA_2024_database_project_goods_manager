@@ -614,7 +614,7 @@ export default {
       emailHeader: "邮箱",
       phoneHeader: "电话",
       passwordHeader: "密码",
-      defaultPassword: "iloveworking",
+      defaultPassword: "behappyeveryday",
       isEditing: false,
       isDeleting: false,
       isResettingPassword: false,

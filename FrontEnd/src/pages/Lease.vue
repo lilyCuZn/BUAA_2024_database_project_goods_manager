@@ -35,27 +35,35 @@
                   ></md-input>
                 </md-field>
               </div>
-
-              <div class="md-layout-item md-size-40">
+              <div class="md-layout-item md-size-20">
+                <md-field>
+                  <label>{{ createdTimeHeader }}</label>
+                  <md-input
+                    v-model="filters.createdTime"
+                    @input="updateFilteredLeaseApplies"
+                  ></md-input>
+                </md-field>
+              </div>
+              <div class="md-layout-item md-size-25">
                 <md-field>
                   <label>{{ goodsInfoHeader }}</label>
                   <md-input
                     v-model="filters.goodsInfo"
-                    type="phone"
                     @input="updateFilteredLeaseApplies"
                   ></md-input>
                 </md-field>
               </div>
-              <div class="md-layout-item md-size-40">
+
+              <div class="md-layout-item md-size-25">
                 <md-field>
                   <label>{{ goodsUsageHeader }}</label>
                   <md-input
                     v-model="filters.goodsUsage"
-                    type="phone"
                     @input="updateFilteredLeaseApplies"
                   ></md-input>
                 </md-field>
               </div>
+
               <div class="md-layout-item md-size-10">
                 <md-field>
                   <label>{{ stateHeader }}</label>
@@ -70,6 +78,15 @@
                       >{{ option }}</md-option
                     >
                   </md-select>
+                </md-field>
+              </div>
+              <div class="md-layout-item md-size-10">
+                <md-field>
+                  <label>{{ returnMessageHeader }}</label>
+                  <md-input
+                    v-model="filters.returnMessage"
+                    @input="updateFilteredLeaseApplies"
+                  ></md-input>
                 </md-field>
               </div>
               <div class="md-layout-item md-size-5"></div>
@@ -92,10 +109,7 @@
                 v-for="(item, index) in paginatedData"
                 :key="index"
               >
-                <div
-                  class="md-layout-item md-size-5"
-                  style="padding-left: 10px"
-                >
+                <div class="md-layout-item md-size-5">
                   <md-field>
                     <md-input
                       v-model="item.id"
@@ -103,8 +117,15 @@
                     ></md-input>
                   </md-field>
                 </div>
-
-                <div class="md-layout-item md-size-40">
+                <div class="md-layout-item md-size-20">
+                  <md-field>
+                    <md-input
+                      v-model="item.createdTime"
+                      disabled
+                    ></md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-25">
                   <md-field>
                     <md-input
                       v-model="item.goodsInfo"
@@ -112,7 +133,7 @@
                     ></md-input>
                   </md-field>
                 </div>
-                <div class="md-layout-item md-size-40">
+                <div class="md-layout-item md-size-25">
                   <md-field>
                     <md-input
                       v-model="item.goodsUsage"
@@ -123,6 +144,15 @@
                 <div class="md-layout-item md-size-10">
                   <md-field>
                     <md-input v-model="item.state" disabled>
+                    </md-input>
+                  </md-field>
+                </div>
+                <div class="md-layout-item md-size-10">
+                  <md-field>
+                    <md-input
+                      v-model="item.returnMessage"
+                      disabled
+                    >
                     </md-input>
                   </md-field>
                 </div>
@@ -273,6 +303,8 @@ export default {
       applicantHeader: "申请人",
       phoneHeader: "手机",
       goodsInfoHeader: "物资信息",
+      createdTimeHeader: "创建时间",
+      returnMessageHeader: "批示信息",
       goodsUsageHeader: "物资用途",
       stateHeader: "状态",
 
@@ -289,6 +321,7 @@ export default {
         id: "",
         applicant: "",
         phone: "",
+        createdTime: "",
         goodsInfo: "",
         goodsUsage: "",
         state: "全部状态",
@@ -422,8 +455,7 @@ export default {
       if (msg && msg.result === "success") {
         console.log("addLeaseApply success");
         newLeaseApply.id = msg.id;
-        this.leaseApplies.push(newLeaseApply);
-        this.updateFilteredLeaseApplies();
+        this.updateLeaseApplies();
       }
     },
     enableAdding() {

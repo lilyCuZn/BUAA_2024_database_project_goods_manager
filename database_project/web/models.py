@@ -148,7 +148,6 @@ class Material(models.Model):
     STATUS_CHOICES = [
         ('In', '库中'),
         ('BORROWING', '租赁中'),
-        ('OVERDUE', '已逾期'),
         ('IN_MAINTENANCE', '维护中'),
         ('DAMAGE', '损坏'),
         ('LOST', '已丢失'),
@@ -280,13 +279,11 @@ class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）�
 
     def checkOverdue(self):
         time = datetime.now()
-        if ((time-self.leaseTime) >= timedelta(days=30)):
+        if (self.status == '租赁中' and (time-self.leaseTime) >= timedelta(days=30)):
             self.status = '已逾期'
             self.save()
             leaseApply = self.userApplyId
             leaseApply.setStatus('已逾期')
-            material = self.materialId
-            material.setStatus('已逾期')
 
 class MaintainRecord(models.Model):
     MAINTAIN_STATUS = [

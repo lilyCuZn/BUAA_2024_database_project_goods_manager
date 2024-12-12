@@ -70,22 +70,6 @@
         </md-table-row>
         <div class="md-layout" v-if="focusedItem === item">
           <div
-            class="md-layout-item md-small-size-100 md-size-100"
-          >
-            <md-field>
-              <label>申请状态</label>
-              <md-select v-model="item.status" disabled>
-                <md-option
-                  v-for="option in approveOptions"
-                  :key="option"
-                  :value="option"
-                  >{{ option }}</md-option
-                >
-              </md-select>
-            </md-field>
-          </div>
-
-          <div
             class="md-layout-item md-small-size-100 md-size-50"
           >
             <md-field>

@@ -119,7 +119,7 @@
         >
           <md-icon>delete</md-icon>
           <md-tooltip md-direction="top"
-            >删除报废、已丢失、已逾期的物资</md-tooltip
+            >删除报废、已丢失的物资记录</md-tooltip
           >
         </md-button>
         <md-button

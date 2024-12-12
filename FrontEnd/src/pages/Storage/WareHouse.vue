@@ -163,15 +163,6 @@ export default {
   data() {
     return {
       goods: [],
-      statusOptions: [
-        "租赁中",
-        "维护中",
-        "库中",
-        "已报废",
-        "已丢失",
-        "已逾期",
-      ],
-
       filter_statusOptions: [
         "租赁中",
         "维护中",
@@ -179,7 +170,6 @@ export default {
         "全部状态",
         "已报废",
         "已丢失",
-        "已逾期",
       ],
       filter_categoryOptions: [],
       filters: {

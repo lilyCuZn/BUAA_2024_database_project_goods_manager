@@ -253,7 +253,8 @@ class LeaseApply(models.Model): #用户申请租赁
 class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）为主键，标识某个租赁记录
     LEASE_RETURN_STATUS = [
         ('LEASING', '租赁中'),
-        ('RETURNED', '已归还'),
+        ('RETURNED_ONTIME', '已按时归还'),
+        ('RETURNED_OVERDUE', '已逾期归还'),
         ('DAMAGE', '已损坏'),
         ('LOST', '已丢失'),
         ('OVERDUE', '已逾期')

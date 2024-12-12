@@ -530,7 +530,10 @@ def setMaterialStatus_afterReturn(request): # 在归还后
         leaseReturn.setStatus('已丢失')
         material.setStatus('已丢失')
     elif status == '完好':
-        leaseReturn.setStatus('已归还')
+        if (leaseReturn.status == '已逾期'):
+            leaseReturn.setStatus('已逾期归还')
+        else:
+            leaseReturn.setStatus('已按时归还')
         material.setStatus('库中')
     elif status == '损坏':
         leaseReturn.setStatus('已损坏')

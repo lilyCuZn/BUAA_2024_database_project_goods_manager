@@ -162,7 +162,8 @@
                     :style="{
                       textAlign: 'right',
                       display:
-                        item.state === '租赁中'
+                        item.state === '租赁中' ||
+                        item.state === '已逾期'
                           ? 'block'
                           : 'none',
                     }"
@@ -314,6 +315,7 @@ export default {
         "拒绝",
         "已结束",
         "归还中",
+        "已逾期",
       ],
       leaseApplies: [],
 
@@ -332,6 +334,7 @@ export default {
         "拒绝",
         "已结束",
         "归还中",
+        "已逾期",
         "全部状态",
       ],
       filteredLeaseApplies: [],

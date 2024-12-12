@@ -486,6 +486,7 @@ export default {
             物资信息: item.goodsInfo,
             物资用途: item.goodsUsage,
             申请状态: item.state,
+            批示信息: item.returnMessage,
           };
         }
       );

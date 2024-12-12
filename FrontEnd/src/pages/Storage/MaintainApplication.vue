@@ -489,6 +489,11 @@ export default {
     },
     async confirmAddingMaintainRecord() {
       console.log("confirmAddingMaintainRecord");
+      console.log("this.selected:", this.selected);
+      console.log(
+        "this.newMaintainRecord:",
+        this.newMaintainRecord
+      );
       this.newMaintainRecord.goods = this.selected.map(
         (good) => good.id
       );
@@ -510,6 +515,7 @@ export default {
         );
       }
       this.isAddingMaintainRecord = false;
+      this.selected = [];
     },
     cancelAddingMaintainRecord() {
       console.log("cancelAddingMaintainRecord");

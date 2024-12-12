@@ -269,6 +269,7 @@ export default {
       let req = {
         action: "checkReturn",
         applicationId: item.id,
+        message: item.returnMessage,
       };
       console.log("req", req);
       let msg = await this.$Backend(req);

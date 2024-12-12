@@ -903,6 +903,7 @@ export default {
       }
       this.isAdding = false;
       this.addingUsers = [cloneDeep(this.defaultNewUser)];
+      this.updateUsersInfo();
       this.$notifyVue("添加新用户成功!");
     },
     triggerFileInput() {

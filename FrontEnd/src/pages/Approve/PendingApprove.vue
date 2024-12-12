@@ -71,24 +71,6 @@
         </md-table-row>
         <div class="md-layout" v-if="focusedItem === item">
           <div
-            class="md-layout-item md-small-size-100 md-size-100"
-          >
-            <md-field>
-              <label>申请状态</label>
-              <md-select
-                v-model="item.status"
-                :disabled="!isEditing"
-              >
-                <md-option
-                  v-for="option in approveOptions"
-                  :key="option"
-                  :value="option"
-                  >{{ option }}</md-option
-                >
-              </md-select>
-            </md-field>
-          </div>
-          <div
             class="md-layout-item md-small-size-100 md-size-50"
           >
             <md-field>
@@ -108,7 +90,7 @@
               <md-textarea
                 v-model="item.reply"
                 type="textarea"
-                :disabled="!isEditing"
+                :disabled="item.status !== '待确认'"
               ></md-textarea>
             </md-field>
           </div>
@@ -118,32 +100,20 @@
           >
             <md-button
               class="md-just-icon md-success"
-              v-if="!isEditing"
-              @click="enableEditing"
-              ><md-icon>edit</md-icon
-              ><md-tooltip md-direction="top"
-                >编辑</md-tooltip
-              ></md-button
-            >
-          </div>
-          <div
-            class="md-layout-item md-size-100 text-right"
-            v-if="isEditing"
-          >
-            <md-button
-              class="md-just-icon md-success"
-              @click="confirmEditing"
+              v-if="item.status === '待确认'"
+              @click="confirmEditing('同意')"
               ><md-icon>check</md-icon
               ><md-tooltip md-direction="top"
-                >确认</md-tooltip
+                >同意</md-tooltip
               ></md-button
             >
             <md-button
-              class="md-just-icon md-white"
-              @click="cancelEditing"
+              class="md-just-icon md-danger"
+              v-if="item.status === '待确认'"
+              @click="confirmEditing('拒绝')"
               ><md-icon>close</md-icon
               ><md-tooltip md-direction="top"
-                >取消</md-tooltip
+                >拒绝</md-tooltip
               ></md-button
             >
           </div>
@@ -203,7 +173,6 @@ export default {
     return {
       pendingApproves: [],
       approveOptions: ["待确认", "拒绝", "同意"],
-      isEditing: false,
       focusedItem: null,
       backupItem: null,
 
@@ -266,21 +235,13 @@ export default {
       console.log("item:", item);
       this.focusedItem =
         this.focusedItem === item ? null : item;
-      this.isEditing = false;
     },
-    enableEditing() {
-      this.isEditing = true;
-      this.backupItem = cloneDeep(this.focusedItem);
-    },
-    async confirmEditing() {
+
+    async confirmEditing(status) {
+      this.focusedItem.status = status;
       await this.modifyApprove();
-      this.isEditing = false;
     },
-    cancelEditing() {
-      console.log("cancelEditing");
-      this.resetFocusedItem();
-      this.isEditing = false;
-    },
+
     resetFocusedItem() {
       console.log("resetFocusedItem");
       this.focusedItem.reply = this.backupItem.reply;

@@ -112,6 +112,7 @@ export default {
         action: "leaseGoods",
         applicationId: application.id,
         categoryNum: this.categoryNum,
+        message: application.returnMessage,
       };
       let res = await this.$Backend(req);
       if (res && res.result === "success") {

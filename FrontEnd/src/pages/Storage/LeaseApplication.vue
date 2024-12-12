@@ -137,13 +137,15 @@
           <div
             v-if="
               item.status === '归还中' ||
-              item.status === '已结束'
+              item.status === '已结束' ||
+              item.status === '已逾期'
             "
             class="md-layout-item md-size-100"
           >
             <ReturnGoods
               ref="ReturnGoods"
               :applicationId="item.id"
+              :applicationStatus="item.status"
             />
             <div>
               <md-button

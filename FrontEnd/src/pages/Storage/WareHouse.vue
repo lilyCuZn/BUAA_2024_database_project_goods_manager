@@ -119,7 +119,7 @@
         >
           <md-icon>delete</md-icon>
           <md-tooltip md-direction="top"
-            >删除报废、已丢失的物资</md-tooltip
+            >删除报废、已丢失、已逾期的物资</md-tooltip
           >
         </md-button>
         <md-button
@@ -169,6 +169,7 @@ export default {
         "库中",
         "已报废",
         "已丢失",
+        "已逾期",
       ],
 
       filter_statusOptions: [
@@ -178,6 +179,7 @@ export default {
         "全部状态",
         "已报废",
         "已丢失",
+        "已逾期",
       ],
       filter_categoryOptions: [],
       filters: {

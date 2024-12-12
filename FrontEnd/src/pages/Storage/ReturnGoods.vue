@@ -28,7 +28,11 @@
         </md-table-cell>
         <md-table-cell
           md-label="检查"
-          v-if="item.status === '租赁中'"
+          v-if="
+            item.status === '租赁中' ||
+            (item.status === '已逾期' &&
+              applicationStatus === '归还中')
+          "
         >
           <md-button
             class="md-success"
@@ -87,12 +91,14 @@
   </div>
 </template>
 <script>
-import { set } from "lodash";
-
 export default {
   props: {
     applicationId: {
       type: Number,
+      required: true, // 强制父组件提供该值
+    },
+    applicationStatus: {
+      type: String,
       required: true, // 强制父组件提供该值
     },
   },

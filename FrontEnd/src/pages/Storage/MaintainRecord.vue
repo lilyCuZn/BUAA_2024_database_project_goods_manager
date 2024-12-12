@@ -386,7 +386,7 @@ export default {
       let msg = await this.$Backend(req);
       if (msg && msg.result === "success") {
         await this.updateMaintainRecords();
-        this.$notifyVue("完成采购成功!");
+        this.$notifyVue("完成维护成功!");
       }
     },
     async toggleDetail(item) {

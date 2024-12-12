@@ -4,6 +4,13 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from collections import defaultdict
+from datetime import datetime, time, timedelta
+from django.utils import timezone
+from django.db.models.functions import ExtractHour, ExtractMinute
+from django.db.models import Count
+from collections import defaultdict  # 确保这一行也被添加
+
 from .models import Member, Department, ApprovalRecord, LeaseApply, Category, Supplier, PurchaseOrder, Material, \
     LeaseReturn, MaintainRecord, Maintain_Material_Result, StockWarning
 
@@ -499,7 +506,13 @@ def getMaterialsFromApplyId(request):  # 根据一个用户申请id，返回它�
     materials = []
     for leaseReturn in leaseReturns:
         material = leaseReturn.materialId
-        materials.append(material.to_dict())
+        material_json = {
+            'id': str(material.id),
+            'category': str(material.category),
+            'status': leaseReturn.status, # 注意这里用的是针对这个订单的状态，而不是物品本身的状态
+            'purchaseId': str(material.purchase_order),
+        }
+        materials.append(material_json)
 
     return JsonResponse({'result': 'success', 'returnGoods': materials})
 
@@ -517,10 +530,13 @@ def setMaterialStatus_afterReturn(request): # 在归还后
         leaseReturn.setStatus('已丢失')
         material.setStatus('已丢失')
     elif status == '完好':
-        leaseReturn.setStatus('已归还')
+        if (leaseReturn.status == '已逾期'):
+            leaseReturn.setStatus('已逾期归还')
+        else:
+            leaseReturn.setStatus('已按时归还')
         material.setStatus('库中')
     elif status == '损坏':
-        leaseReturn.setStatus('已归还')
+        leaseReturn.setStatus('已损坏')
         material.setStatus('损坏')
     leaseReturn.setFinish()
 
@@ -1031,21 +1047,50 @@ def getCategoryAndNum(request):  # 返回每种物资的类别和数量
 
 
 def getLeaseApplyByTime(request):  # 根据三个小时为划分单位，把每段时间的订单数量得到
-    leaseApplyNums = []
-    # 定义一天的开始时间（0点）
-    start_of_day = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    # 初始化结果字典
+    lease_apply_counts = [0] * 9
+    print(lease_apply_counts)
 
-    # 循环处理每 3 小时的时间段
-    for i in range(8):  # 24小时分成8个3小时区间
-        start_time = start_of_day + timedelta(hours=i * 3)
-        end_time = start_time + timedelta(hours=3)
+    # 定义一个函数来将时间归类到最近的3小时区间
+    def get_time_interval(t):
+        # 将时间转换为分钟数并除以 180 (3小时=180分钟)，再乘回去得到最接近的3小时起点
+        minutes = t.hour * 60 + t.minute
+        interval_start_minutes = (minutes // 180) * 180
+        interval_start_hour = interval_start_minutes // 60
+        interval_start_minute = interval_start_minutes % 60
+        t = time(interval_start_hour, interval_start_minute)
+        i = -1
+        if (t == time(0, 0)):
+            i = 0
+        elif (t == time(3, 0)):
+            i = 1
+        elif (t == time(6,0)):
+            i = 2
+        elif (t == time(9,0)):
+            i = 3
+        elif (t == time(12,0)):
+            i = 4
+        elif (t == time(15,0)):
+            i = 5
+        elif (t == time(18,0)):
+            i = 6
+        elif (t == time(21,0)):
+            i = 7
+        print(i)
+        return i
 
-        # 查询在当前时间段内 finishTime 的订单数量
-        count = LeaseApply.objects.filter(
-            finishTime__gte=start_time,
-            finishTime__lt=end_time
-        ).count()
+    # 获取所有需要考虑的 LeaseApply 记录
+    # 注意这里假设 finishTime 包含日期和时间信息
+    all_records = LeaseApply.objects.all()
 
-        leaseApplyNums.append(count)
+    # 遍历所有记录并统计每个时间段内的订单数量
+    for record in all_records:
+        if record.finishTime is not None:
+            record_time = record.finishTime.time()
+            interval = get_time_interval(record_time)
+            lease_apply_counts[interval] += 1
 
-    return JsonResponse({'result': 'success', 'nums': leaseApplyNums})
+    # 打印或处理结果
+    print(lease_apply_counts)
+
+    return JsonResponse({'result': 'success', 'nums': lease_apply_counts})

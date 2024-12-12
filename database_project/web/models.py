@@ -148,6 +148,7 @@ class Material(models.Model):
     STATUS_CHOICES = [
         ('In', '库中'),
         ('BORROWING', '租赁中'),
+        ('OVERDUE', '已逾期'),
         ('IN_MAINTENANCE', '维护中'),
         ('DAMAGE', '损坏'),
         ('LOST', '已丢失'),
@@ -191,6 +192,7 @@ class ApplicationType(models.TextChoices):
 class ApplyStatusType(models.TextChoices):
     WAITING = '待确认'
     LEASING = '租赁中'
+    OVERDUE = '已逾期'
     REFUSE = '拒绝'
     RETURNING = '归还中'
     RETURN = '已结束'
@@ -211,7 +213,7 @@ class LeaseApply(models.Model): #用户申请租赁
     finishTime = models.DateTimeField(null = True) #完成时间
 
     def __str__(self):
-        return f"用户申请 - {self.name} - {self.get_type_display()}"
+        return str(self.id)
 
     def setStatus(self, status):
         self.status = status
@@ -251,7 +253,9 @@ class LeaseApply(models.Model): #用户申请租赁
 class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）为主键，标识某个租赁记录
     LEASE_RETURN_STATUS = [
         ('LEASING', '租赁中'),
-        ('RETURNED', '已归还'),
+        ('RETURNED_ONTIME', '已按时归还'),
+        ('RETURNED_OVERDUE', '已逾期归还'),
+        ('DAMAGE', '已损坏'),
         ('LOST', '已丢失'),
         ('OVERDUE', '已逾期')
     ]
@@ -279,6 +283,10 @@ class LeaseReturn(models.Model): #租赁-归还表，以（申请id-物品id）�
         if ((time-self.leaseTime) >= timedelta(days=30)):
             self.status = '已逾期'
             self.save()
+            leaseApply = self.userApplyId
+            leaseApply.setStatus('已逾期')
+            material = self.materialId
+            material.setStatus('已逾期')
 
 class MaintainRecord(models.Model):
     MAINTAIN_STATUS = [
